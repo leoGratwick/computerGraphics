@@ -269,6 +269,7 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
+	// attempt to open a file: doesn't work
 	// std::string myText;
 	//
 	// // Read from the text file
