@@ -11,6 +11,8 @@
 #include <glm/detail/type_vec3.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include "ModelTriangle.h"
+#include <filesystem>
+#include <cerrno>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -69,26 +71,141 @@ float splitPercent(CanvasPoint lineStart, CanvasPoint lineEnd, CanvasPoint point
 	return splitP;
 }
 
+
 CanvasPoint getPointAlongLine(CanvasPoint lineStart, CanvasPoint lineEnd, float ratio) {
 	CanvasPoint point = CanvasPoint(lineStart.x + (lineEnd.x - lineStart.x)*ratio, lineStart.y + (lineEnd.y - lineStart.y)*ratio );
 	return point;
 }
 
-std::vector<ModelTriangle> parseObj(std::string filename) {
-	std::ifstream file(filename);
-	std::vector<ModelTriangle> tris = {};
+std::vector<std::string> splitByDelimiter(std::string str, char delimiter) {
 
-	if (!file.is_open()) {
-		std::string line;
+	std::string token;
+	std::vector<std::string> tokens;
+	std::istringstream stream(str);
+	while(std::getline(stream, token, delimiter)) {
+		tokens.push_back(token);
+	}
+	return tokens;
+}
+
+std::map<std::string, Colour> createPalette(std::string filename) {
+	std::map<std::string, Colour> palette;
+	std::ifstream file(filename);
+	std::string line;
+
+	if (file.is_open()) {
+		while(std::getline(file, line)) {
+			if (line.substr(0,6) == "newmtl") {
+				std::vector<std::string> tokens = splitByDelimiter(line, ' ');
+				std::string name = tokens.at(1);
+
+				getline(file, line);
+				std::vector<std::string> colourVals = splitByDelimiter(line, ' ');
+
+				// convert from 0-1 to 0-225 for rgb values
+				int r = std::round(std::stof(colourVals.at(1))*225);
+				int g = std::round(std::stof(colourVals.at(2))*225);
+				int b = std::round(std::stof(colourVals.at(3))*225);
+				palette[name] = Colour(r,g,b);
+				// std::cout << name << " added to palette as " << Colour(r,g,b)<< std::endl;
+			}
+		}
+		file.close();
+
+	}
+	else {
+		std::cerr << "Could not open file " << filename << std::endl;
+	}
+	return palette;
+}
+
+
+std::vector<ModelTriangle> parseObj(std::string objFilename, std::string mtlFilename, float scale) {
+
+	std::map<std::string, Colour> palette = createPalette(mtlFilename);
+	std::ifstream file(objFilename);
+	std::vector<ModelTriangle> tris = {};
+	std::string line;
+	ModelTriangle tri;
+	std::vector<glm::vec3> vertices = {};
+	std::vector<std::vector<std::string>> faces = {};
+	std::string col;
+
+
+	if (file.is_open()) {
+
 		 while(std::getline(file, line)) {
-		 	std::cout << line << std::endl;
+		 	// std::cout << line << std::endl;
+
+		 	// add verticies
+		 	if (line[0] == 'v') {
+		 		std::vector<std::string> nums = splitByDelimiter(line, ' ');
+		 		try{
+		 			float x = std::stof(nums.at(1))*scale;
+		 			float y = std::stof(nums.at(2))*scale;
+		 			float z = std::stof(nums.at(3))*scale;
+		 			// std::cout << x << y << z << std::endl;
+		 			glm::vec3 vert(x, y, z);
+		 			// std::cout << line << std::endl;
+		 			// std::cout << vert.x << vert.y << vert.z << std::endl;
+		 			vertices.push_back(vert);
+		 		}
+		 		catch(...) {
+		 			std::cout << "couldn't convert from string to float - vert"<< std::endl;
+		 			return tris;
+		 		}
+
+		 	}
+		 	// add faces
+		 	else if (line[0] == 'f') {
+		 		std::vector<std::string> nums = splitByDelimiter(line, ' ');
+		 		try{
+		 			nums.at(1).pop_back();
+		 			nums.at(2).pop_back();
+		 			nums.at(3).pop_back();
+		 			std::vector<std::string> face = {};
+		 			face.push_back(nums.at(1));
+		 			face.push_back(nums.at(2));
+		 			face.push_back(nums.at(3));
+		 			face.push_back(col);
+		 			faces.push_back(face);
+		 		}
+		 		catch(...) {
+		 			std::cout << "couldn't convert from string to float - face"<< std::endl;
+		 			return tris;
+		 		}
+		 	}
+		 	else if(line.substr(0,6) == "usemtl") {
+		 		// changing current coulur
+		 		std::vector<std::string> tokens = splitByDelimiter(line, ' ');
+		 		std::string name = tokens.at(1);
+		 		col = name;
+
+		 	}
+
 
 		 }
 
 		file.close();
+
+		// add every face along with its colour
+		for (int i = 0; i < faces.size(); i++) {
+			int v1loc = std::stoi(faces.at(i)[0]) - 1;
+			glm::vec3 vert1(vertices.at(v1loc));
+			int v2loc = std::stoi(faces.at(i)[1]) - 1;
+			glm::vec3 vert2(vertices.at(v2loc));
+			int v3loc = std::stoi(faces.at(i)[2]) - 1;
+			glm::vec3 vert3(vertices.at(v3loc));
+			std::string colour = faces.at(i)[3];
+			ModelTriangle tri = ModelTriangle(vert1,vert2,vert3, palette[colour]);
+			// std::cout << tri << palette[colour] << std::endl;
+			tris.push_back(tri);
+		}
+
+
 	}
 	else {
-		std::cerr << "Could not open file " << filename << std::endl;
+		std::cerr << "Could not open file " << objFilename << std::endl;
 	}
 	return tris;
 }
@@ -539,8 +656,8 @@ int main(int argc, char *argv[]) {
 	// textureTriangle(window,drTri,brickTexture,txTri);
 	// drawTriangle(window, drTri, Colour(255, 255, 255));
 
-	const std::string objFile = "test.txt";
-	parseObj(objFile);
+
+	parseObj("cornell-box.obj", "cornell-box.mtl", 1.0);
 
 
 
