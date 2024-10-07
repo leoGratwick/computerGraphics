@@ -10,6 +10,7 @@
 #include <glm/detail/type_vec.hpp>
 #include <glm/detail/type_vec3.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include "ModelTriangle.h"
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -71,6 +72,25 @@ float splitPercent(CanvasPoint lineStart, CanvasPoint lineEnd, CanvasPoint point
 CanvasPoint getPointAlongLine(CanvasPoint lineStart, CanvasPoint lineEnd, float ratio) {
 	CanvasPoint point = CanvasPoint(lineStart.x + (lineEnd.x - lineStart.x)*ratio, lineStart.y + (lineEnd.y - lineStart.y)*ratio );
 	return point;
+}
+
+std::vector<ModelTriangle> parseObj(std::string filename) {
+	std::ifstream file(filename);
+	std::vector<ModelTriangle> tris = {};
+
+	if (!file.is_open()) {
+		std::string line;
+		 while(std::getline(file, line)) {
+		 	std::cout << line << std::endl;
+
+		 }
+
+		file.close();
+	}
+	else {
+		std::cerr << "Could not open file " << filename << std::endl;
+	}
+	return tris;
 }
 
 void drawCanvasPoint(CanvasPoint point, Colour col, DrawingWindow& window) {
@@ -344,7 +364,7 @@ void textureFlatBottomTriangle(DrawingWindow &window, CanvasTriangle drawingTria
 
 void textureFlatTopTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, TextureMap textureMap, CanvasTriangle textureTriangle) {
 
-	std::cout << "drawing textured flat bottom triangle" << std::endl;
+	std::cout << "drawing textured flat top triangle" << std::endl;
 
 	CanvasPoint v0 = drawingTriangle.v0();
 	CanvasPoint v1 = drawingTriangle.v1();
@@ -511,13 +531,16 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
-	const std::string textureFile = "texture.ppm";
-	TextureMap brickTexture = TextureMap(textureFile);
-	CanvasTriangle drTri = CanvasTriangle(CanvasPoint(160,10), CanvasPoint(300,230), CanvasPoint(10,150));
-	CanvasTriangle txTri = CanvasTriangle(CanvasPoint(195,5), CanvasPoint(395,380), CanvasPoint(65,330));
+	// const std::string textureFile = "texture.ppm";
+	// TextureMap brickTexture = TextureMap(textureFile);
+	// CanvasTriangle drTri = CanvasTriangle(CanvasPoint(160,10), CanvasPoint(300,230), CanvasPoint(10,150));
+	// CanvasTriangle txTri = CanvasTriangle(CanvasPoint(195,5), CanvasPoint(395,380), CanvasPoint(65,330));
+	//
+	// textureTriangle(window,drTri,brickTexture,txTri);
+	// drawTriangle(window, drTri, Colour(255, 255, 255));
 
-	textureTriangle(window,drTri,brickTexture,txTri);
-	drawTriangle(window, drTri, Colour(255, 255, 255));
+	const std::string objFile = "test.txt";
+	parseObj(objFile);
 
 
 

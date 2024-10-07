@@ -776,6 +776,18 @@ vector
 SDL.h
 ../libs/sdw/SDL.h
 
+../libs/sdw/ModelTriangle.h
+glm/glm.hpp
+-
+string
+-
+array
+-
+Colour.h
+../libs/sdw/Colour.h
+TexturePoint.h
+../libs/sdw/TexturePoint.h
+
 ../libs/sdw/TextureMap.h
 iostream
 -
@@ -823,6 +835,8 @@ glm/detail/type_vec3.hpp
 -
 glm/gtx/string_cast.hpp
 -
+ModelTriangle.h
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/ModelTriangle.h
 
 /usr/include/SDL2/SDL.h
 SDL_main.h
