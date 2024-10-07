@@ -3,7 +3,6 @@
 #include <DrawingWindow.h>
 #include <CanvasPoint.h>
 #include <Utils.h>
-#include <fstream>
 #include <iostream>
 #include <TextureMap.h>
 #include <vector>
@@ -43,6 +42,18 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 
 }
 
+std::vector<CanvasPoint> lerpCanvasPoints(CanvasPoint from, CanvasPoint to, int numberOfValues) {
+	std::vector<CanvasPoint> lerpd = {};
+	std::vector<float>  col1 = interpolateSingleFloats(from.x, to.x, numberOfValues);
+	std::vector<float>  col2 = interpolateSingleFloats(from.y, to.y, numberOfValues);
+
+	for (int i = 0; i < numberOfValues; i++) {
+		CanvasPoint add(col1.at(i), col2.at(i));
+		lerpd.push_back(add);
+	}
+	return lerpd;
+}
+
 uint32_t vec3toColour(glm::vec3 vec) {
 	float red = vec[0];
 	float green = vec[1];
@@ -52,11 +63,41 @@ uint32_t vec3toColour(glm::vec3 vec) {
 	return colour;
 }
 
+float splitPercent(CanvasPoint lineStart, CanvasPoint lineEnd, CanvasPoint point) {
+	float splitP = std::abs(point.x - lineStart.x) / std::abs(lineEnd.x - lineStart.x);
+	return splitP;
+}
+
+CanvasPoint getPointAlongLine(CanvasPoint lineStart, CanvasPoint lineEnd, float ratio) {
+	CanvasPoint point = CanvasPoint(lineStart.x + (lineEnd.x - lineStart.x)*ratio, lineStart.y + (lineEnd.y - lineStart.y)*ratio );
+	return point;
+}
+
 void drawCanvasPoint(CanvasPoint point, Colour col, DrawingWindow& window) {
 	int x = std::round(point.x);
 	int y = std::round(point.y);
 	uint32_t colour = (255 << 24) + (int(col.red) << 16) + (int(col.green) << 8) + int(col.blue);
 	window.setPixelColour(x, y, colour);
+
+}
+
+void drawCanvasPointUint(CanvasPoint point, uint32_t col, DrawingWindow& window) {
+	int x = std::round(point.x);
+	int y = std::round(point.y);
+	window.setPixelColour(x, y, col);
+}
+
+uint32_t getColourFromTexture(CanvasPoint point, TextureMap& textureMap) {
+	int h = textureMap.height;
+	int w = textureMap.width;
+
+	if (std::round(point.x) >= w or std::round(point.y) >= h) {
+		std::cout << point ;
+		throw std::runtime_error(" this point doesnt exist on the texture");
+	}
+	int ind = std::round(point.y) * w + std::round(point.x);
+
+	return textureMap.pixels[ind];
 
 }
 
@@ -229,6 +270,206 @@ void randomTriangle(DrawingWindow &window) {
 	window.renderFrame();
 }
 
+
+void textureFlatBottomTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, TextureMap textureMap, CanvasTriangle textureTriangle) {
+
+	std::cout << "drawing textured flat bottom triangle" << std::endl;
+
+	CanvasPoint v0 = drawingTriangle.v0();
+	CanvasPoint v1 = drawingTriangle.v1();
+	CanvasPoint v2 = drawingTriangle.v2();
+
+	float slope1 = (v1.x - v0.x) / (v1.y - v0.y);
+	float slope2 = (v2.x - v0.x) / (v2.y - v0.y);
+
+	float currentX1 = v0.x;
+	float currentX2 = v0.x;
+
+	// number of pixels between currentX1 and currentX2
+	int numPixels;
+	float ratio1;
+	float ratio2;
+	CanvasPoint textureFrom;
+	CanvasPoint textureTo;
+
+
+	for (int y = v0.y; y <= v1.y; y++) {
+		if (currentX1 == currentX2) {
+
+			uint32_t col = getColourFromTexture(textureTriangle.v0(), textureMap);
+			drawCanvasPointUint(CanvasPoint(currentX1, y), col, window);
+
+			currentX1 += slope1;
+			currentX2 += slope2;
+			continue;
+		}
+
+		CanvasPoint from = CanvasPoint(currentX1, y);
+		CanvasPoint to = CanvasPoint(currentX2, y);
+
+		numPixels = std::abs(std::round(currentX1) - std::round(currentX2)) + 1;
+
+		ratio1 = splitPercent(v0,v1, from);
+		ratio2 = splitPercent(v0,v2, to);
+
+		textureFrom = getPointAlongLine(textureTriangle.v0(),textureTriangle.v1(), ratio1);
+		textureTo = getPointAlongLine(textureTriangle.v0(),textureTriangle.v2(), ratio2);
+
+		// vector of numPixel points along a line on the texture
+		std::vector<CanvasPoint> texturePixels = lerpCanvasPoints(textureFrom, textureTo, numPixels);
+		std::vector<uint32_t> texturePixelsColours = {};
+		// std::cout << texturePixels.at(0) << std::endl;
+		// find colour of each point on the texture
+		for (int i = 0; i < numPixels; i++) {
+			uint32_t colour = getColourFromTexture(texturePixels.at(i), textureMap);
+
+			texturePixelsColours.push_back(colour);
+		}
+
+		// draw each pixel in the row with the colour from texture pixels colours
+		int j = 0;
+		for (int x = std::round(currentX1); x <= std::round(currentX2); x++) {
+			drawCanvasPointUint(CanvasPoint(x,y), texturePixelsColours[j], window);
+			j += 1;
+		}
+
+
+
+		// drawLine(window, from, to, colour);
+		currentX1 += slope1;
+		currentX2 += slope2;
+	}
+
+}
+
+void textureFlatTopTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, TextureMap textureMap, CanvasTriangle textureTriangle) {
+
+	std::cout << "drawing textured flat bottom triangle" << std::endl;
+
+	CanvasPoint v0 = drawingTriangle.v0();
+	CanvasPoint v1 = drawingTriangle.v1();
+	CanvasPoint v2 = drawingTriangle.v2();
+
+	float slope1 = (v0.x - v2.x) / (v0.y - v2.y);
+	float slope2 = (v1.x - v2.x) / (v1.y - v2.y);
+
+	float currentX1 = v2.x;
+	float currentX2 = v2.x;
+
+
+	// number of pixels between currentX1 and currentX2
+	int numPixels;
+	float ratio1;
+	float ratio2;
+	CanvasPoint textureFrom;
+	CanvasPoint textureTo;
+
+
+	for (int y = v2.y; y >= v1.y; y--) {
+		if (currentX1 == currentX2) {
+
+			uint32_t col = getColourFromTexture(textureTriangle.v0(), textureMap);
+			drawCanvasPointUint(CanvasPoint(currentX1, y), col, window);
+
+			currentX1 -= slope1;
+			currentX2 -= slope2;
+			continue;
+		}
+
+		CanvasPoint from = CanvasPoint(currentX1, y);
+		CanvasPoint to = CanvasPoint(currentX2, y);
+
+		numPixels = std::abs(std::round(currentX1) - std::round(currentX2)) + 1;
+
+		ratio1 = splitPercent(v2,v0, from);
+		ratio2 = splitPercent(v2,v1, to);
+
+		textureFrom = getPointAlongLine(textureTriangle.v2(),textureTriangle.v0(), ratio1);
+		textureTo = getPointAlongLine(textureTriangle.v2(),textureTriangle.v1(), ratio2);
+
+		// vector of numPixel points along a line on the texture
+		std::vector<CanvasPoint> texturePixels = lerpCanvasPoints(textureFrom, textureTo, numPixels);
+		std::vector<uint32_t> texturePixelsColours = {};
+		// std::cout << texturePixels.at(0) << std::endl;
+		// find colour of each point on the texture
+		for (int i = 0; i < numPixels; i++) {
+			uint32_t colour = getColourFromTexture(texturePixels.at(i), textureMap);
+
+			texturePixelsColours.push_back(colour);
+		}
+
+		// draw each pixel in the row with the colour from texture pixels colours
+		int j = 0;
+		for (int x = std::round(currentX1); x <= std::round(currentX2); x++) {
+			drawCanvasPointUint(CanvasPoint(x,y), texturePixelsColours[j], window);
+			j += 1;
+		}
+
+
+
+		// drawLine(window, from, to, colour);
+		currentX1 -= slope1;
+		currentX2 -= slope2;
+	}
+}
+
+void textureTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, TextureMap textureMap, CanvasTriangle textureTriangle ) {
+
+	// makes sure verts are sorted the same way for both triangles
+	std::vector<std::vector<CanvasPoint>> verts = {     {drawingTriangle.v0(), textureTriangle.v0()},
+														{drawingTriangle.v1(),textureTriangle.v1()},
+														{drawingTriangle.v2(), textureTriangle.v2()}};
+	// std::vector<CanvasPoint> vertsTx = {textureTriangle.v0(), textureTriangle.v1(), textureTriangle.v2()};
+
+	// sort canvas verticies by drawingTriangle y coordinate
+	std::sort(verts.begin(), verts.end(), [](const std::vector<CanvasPoint>& a, const std::vector<CanvasPoint>& b) {
+		return a.at(0).y < b.at(0).y;  // Sort by y
+	});
+
+
+	CanvasPoint vD0 = verts.at(0).at(0);
+	CanvasPoint vD1 = verts.at(1).at(0);
+	CanvasPoint vD2 = verts.at(2).at(0);
+
+	CanvasPoint vT0 = verts.at(0).at(1);
+	CanvasPoint vT1 = verts.at(1).at(1);
+	CanvasPoint vT2 = verts.at(2).at(1);
+
+
+
+
+	// flat bottom triangle
+	if (vD2.y == vD1.y) {
+		CanvasTriangle tri = CanvasTriangle(vD0, vD1, vD2);
+		textureFlatBottomTriangle(window, tri, textureMap, textureTriangle);
+	}
+	// flat top triangle
+	else if(vD0.y == vD1.y) {
+		CanvasTriangle tri = CanvasTriangle(vD0, vD1, vD2);
+		textureFlatBottomTriangle(window, tri, textureMap, textureTriangle);
+	}
+	// all other triangles
+	else {
+		float m = (vD2.y-vD0.y)/(vD2.x-vD0.x);
+		float x = (vD1.y - vD0.y)/m + vD0.x;
+		CanvasPoint vD3 = CanvasPoint(x, vD1.y);
+		float splitPercent = ::splitPercent(vD0, vD2, vD3);
+		// calculate point to split texture at
+		CanvasPoint vT3 = getPointAlongLine(vT0, vT2, splitPercent);
+
+		CanvasTriangle flatBottomTri = CanvasTriangle(vD0, vD1, vD3);
+		CanvasTriangle topTextTri = CanvasTriangle(vT0, vT1, vT3);
+		textureFlatBottomTriangle(window, flatBottomTri,  textureMap, topTextTri);
+
+		CanvasTriangle flatTopTri = CanvasTriangle(vD1, vD3, vD2);
+		CanvasTriangle bottomTextTri = CanvasTriangle(vT1, vT3, vT2);
+		textureFlatTopTriangle(window, flatTopTri, textureMap, bottomTextTri);
+
+	}
+
+
+}
+
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
 		if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
@@ -258,8 +499,9 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 }
 
 void draw(DrawingWindow &window) {
-	window.clearPixels();
-	rainbow(window);
+	// window.clearPixels();
+	// rainbow(window);
+	// randomTriangle(window);
 
 
 
@@ -269,28 +511,21 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
-	// attempt to open a file: doesn't work
-	// std::string myText;
-	//
-	// // Read from the text file
-	// std::ifstream MyReadFile("test.txt");
-	//
-	// // Use a while loop together with the getline() function to read the file line by line
-	// while (getline (MyReadFile, myText)) {
-	// 	// Output the text from the file
-	// 	std::cout << myText;
-	// }
-	//
-	// // Close the file
-	// MyReadFile.close();
-
 	const std::string textureFile = "texture.ppm";
 	TextureMap brickTexture = TextureMap(textureFile);
+	CanvasTriangle drTri = CanvasTriangle(CanvasPoint(160,10), CanvasPoint(300,230), CanvasPoint(10,150));
+	CanvasTriangle txTri = CanvasTriangle(CanvasPoint(195,5), CanvasPoint(395,380), CanvasPoint(65,330));
+
+	textureTriangle(window,drTri,brickTexture,txTri);
+	drawTriangle(window, drTri, Colour(255, 255, 255));
+
+
 
 
 	while (windowOpen) {
 		// We MUST poll for events - otherwise the window will freeze !
 		if (window.pollForInputEvents(event)) handleEvent(event, window);
+
 		draw(window);
 		// Need to render the frame at the end, or nothing actually gets shown on the screen !
 		window.renderFrame();
