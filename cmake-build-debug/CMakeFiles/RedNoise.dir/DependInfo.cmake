@@ -13,6 +13,7 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/libs/sdw/TextureMap.cpp" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles/RedNoise.dir/libs/sdw/TextureMap.cpp.o"
   "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/libs/sdw/TexturePoint.cpp" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles/RedNoise.dir/libs/sdw/TexturePoint.cpp.o"
   "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/libs/sdw/Utils.cpp" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles/RedNoise.dir/libs/sdw/Utils.cpp.o"
+  "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.cpp" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles/RedNoise.dir/src/Helpers.cpp.o"
   "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/RedNoise.cpp" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")

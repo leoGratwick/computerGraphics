@@ -366,6 +366,33 @@ libs/sdw/Utils.cpp.s:
 	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Utils.cpp.s
 .PHONY : libs/sdw/Utils.cpp.s
 
+src/Helpers.o: src/Helpers.cpp.o
+
+.PHONY : src/Helpers.o
+
+# target to build an object file
+src/Helpers.cpp.o:
+	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/Helpers.cpp.o
+.PHONY : src/Helpers.cpp.o
+
+src/Helpers.i: src/Helpers.cpp.i
+
+.PHONY : src/Helpers.i
+
+# target to preprocess a source file
+src/Helpers.cpp.i:
+	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/Helpers.cpp.i
+.PHONY : src/Helpers.cpp.i
+
+src/Helpers.s: src/Helpers.cpp.s
+
+.PHONY : src/Helpers.s
+
+# target to generate assembly for a file
+src/Helpers.cpp.s:
+	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/Helpers.cpp.s
+.PHONY : src/Helpers.cpp.s
+
 src/RedNoise.o: src/RedNoise.cpp.o
 
 .PHONY : src/RedNoise.o
@@ -429,6 +456,9 @@ help:
 	@echo "... libs/sdw/Utils.o"
 	@echo "... libs/sdw/Utils.i"
 	@echo "... libs/sdw/Utils.s"
+	@echo "... src/Helpers.o"
+	@echo "... src/Helpers.i"
+	@echo "... src/Helpers.s"
 	@echo "... src/RedNoise.o"
 	@echo "... src/RedNoise.i"
 	@echo "... src/RedNoise.s"

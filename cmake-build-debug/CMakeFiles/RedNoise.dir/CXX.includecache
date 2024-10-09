@@ -810,6 +810,70 @@ string
 vector
 -
 
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.cpp
+CanvasTriangle.h
+-
+Colour.h
+-
+DrawingWindow.h
+-
+CanvasPoint.h
+-
+Utils.h
+-
+iostream
+-
+TextureMap.h
+-
+vector
+-
+bits/stdc++.h
+-
+glm/detail/type_vec.hpp
+-
+glm/detail/type_vec3.hpp
+-
+glm/gtx/string_cast.hpp
+-
+ModelTriangle.h
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/ModelTriangle.h
+filesystem
+-
+cerrno
+-
+
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.h
+CanvasTriangle.h
+-
+Colour.h
+-
+DrawingWindow.h
+-
+CanvasPoint.h
+-
+Utils.h
+-
+iostream
+-
+TextureMap.h
+-
+vector
+-
+bits/stdc++.h
+-
+glm/detail/type_vec.hpp
+-
+glm/detail/type_vec3.hpp
+-
+glm/gtx/string_cast.hpp
+-
+ModelTriangle.h
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/ModelTriangle.h
+filesystem
+-
+cerrno
+-
+
 /mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/RedNoise.cpp
 CanvasTriangle.h
 -
@@ -841,6 +905,8 @@ filesystem
 -
 cerrno
 -
+Helpers.h
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.h
 
 /usr/include/SDL2/SDL.h
 SDL_main.h

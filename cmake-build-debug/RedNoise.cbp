@@ -142,6 +142,12 @@
 		<Unit filename="/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/libs/sdw/Utils.h">
 			<Option target="RedNoise"/>
 		</Unit>
+		<Unit filename="/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.cpp">
+			<Option target="RedNoise"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.h">
+			<Option target="RedNoise"/>
+		</Unit>
 		<Unit filename="/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/RedNoise.cpp">
 			<Option target="RedNoise"/>
 		</Unit>

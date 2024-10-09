@@ -36,7 +36,9 @@ add_executable(RedNoise
         libs/sdw/TexturePoint.cpp
         libs/sdw/Utils.cpp
         src/RedNoise.cpp
-        src/RedNoise.cpp)
+        src/RedNoise.cpp
+        src/Helpers.cpp
+        src/Helpers.h)
 
 if (MSVC)
     target_compile_options(RedNoise
