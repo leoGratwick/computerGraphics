@@ -1,6 +1,3 @@
-//
-// Created by User on 9/10/2024.
-//
 
 #ifndef HELPERS_H
 #define HELPERS_H
@@ -25,7 +22,8 @@
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues) ;
 
-std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues) ;
+std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues);
+
 std::vector<CanvasPoint> lerpCanvasPoints(CanvasPoint from, CanvasPoint to, int numberOfValues);
 
 uint32_t vec3toColour(glm::vec3 vec);
@@ -45,6 +43,8 @@ void redNoise(DrawingWindow &window);
 void grayScale1D(DrawingWindow &window);
 
 void rainbow(DrawingWindow &window);
+
+glm::mat3 rotateOrientation(std::string axis, float angle, glm::mat3 currentOr );
 
 
 #endif //HELPERS_H

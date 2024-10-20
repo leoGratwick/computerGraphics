@@ -157,3 +157,18 @@ void rainbow(DrawingWindow &window) {
 
 
 }
+
+glm::mat3 rotateOrientation(std::string axis, float angle, glm::mat3 currentOr ) {
+    glm::mat3 rotationMatrix = glm::mat3();
+    if (axis == "x") {
+        rotationMatrix = glm::mat3(1,0,0,0, std::cos(angle), std::sin(angle), 0, -std::sin(angle), std::cos(angle));
+    }
+    else if (axis == "y") {
+        rotationMatrix = glm::mat3(std::cos(angle),0,-std::sin(angle),0,1,0, std::sin(angle), 0, std::cos(angle));
+    }
+    else if (axis == "z") {
+        rotationMatrix = glm::mat3(std::cos(angle), std::sin(angle),0,-std::sin(angle), std::cos(angle), 0,0,0,1);
+    }
+    glm::mat3 newOr = rotationMatrix*currentOr;
+    return newOr;
+}

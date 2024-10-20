@@ -15,16 +15,24 @@
 #include <cerrno>
 #include "Helpers.h"
 
-#define WIDTH 320
-#define HEIGHT 240
+#define WIDTH 900
+#define HEIGHT 900
+
+// GLOBAL VARS
 
 bool windowOpen = true;
 
 glm::vec3 camera(0,0,4);
+glm::vec3 camDir(1,1,1);
+glm::mat3 camOr(1,0,0,0,1,0,0,0,1);
+glm::mat3 modelOr(1,0,0,0,1,0,0,0,1);
+float theta = 0;
+
 std::vector<std::vector<float>> zDepth(WIDTH, std::vector<float>(HEIGHT, -10000));
 
 float focalLength = 2.0;
 
+bool lookAt = true;
 
 
 std::map<std::string, Colour> createPalette(std::string filename) {
@@ -195,13 +203,17 @@ void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour co
 		return;
 
 	}
-	int range = std::round(std::max(std::abs(to.x - from.x), std::abs(to.y - from.y)))*3;
-	std::vector<float> lerpX = interpolateSingleFloats(from.x, to.x, range);
-	std::vector<float> lerpY = interpolateSingleFloats(from.y, to.y, range);
-	std::vector<float> lerpDepths = interpolateSingleFloats(from.depth, to.depth, range);
+	float xDiff = to.x - from.x;
+	float yDiff = to.y - from.y;
+	int steps = std::max(std::abs(xDiff), std::abs(yDiff))*2;
+	float xStep = xDiff / steps;
+	float yStep = yDiff / steps;
+	// std::vector<float> lerpX = interpolateSingleFloats(from.x, to.x, range);
+	// std::vector<float> lerpY = interpolateSingleFloats(from.y, to.y, range);
+	std::vector<float> lerpDepths = interpolateSingleFloats(from.depth, to.depth, steps);
 
-	for (int i = 0; i < range; i++) {
-		CanvasPoint point = CanvasPoint(lerpX.at(i), lerpY.at(i));
+	for (int i = 0; i < steps; i++) {
+		CanvasPoint point = CanvasPoint(from.x + i*xStep, from.y + i*yStep);
 		point.depth = lerpDepths.at(i);
 		// std::cout << "drawing point: " << point << std::endl;
 		drawCanvasPoint(point, colour, window);
@@ -534,7 +546,7 @@ void textureTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, Text
 		float m = (vD2.y-vD0.y)/(vD2.x-vD0.x);
 		float x = (vD1.y - vD0.y)/m + vD0.x;
 		CanvasPoint vD3 = CanvasPoint(x, vD1.y);
-		float splitPercent = ::splitPercent(vD0, vD2, vD3);
+		float splitPercent = splitPercent(vD0, vD2, vD3);
 		// calculate point to split texture at
 		CanvasPoint vT3 = getPointAlongLine(vT0, vT2, splitPercent);
 
@@ -561,6 +573,10 @@ glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 
 CanvasPoint projectVertexOntoCanvasPoint (glm::vec3 point, float focalLength, float scale, DrawingWindow &window ) {
 	// in camera coord system
 	CanvasPoint out;
+	glm::vec3 camToVert = point - camera;
+	glm::vec3 adjCoord = camToVert * camOr;
+
+	point = adjCoord;
 	float heightShift = window.height / 2;
 	float widthShift = window.width / 2;
 
@@ -570,23 +586,43 @@ CanvasPoint projectVertexOntoCanvasPoint (glm::vec3 point, float focalLength, fl
 	return out;
 }
 
+void camLookAt(glm::vec3 point) {
+
+	glm::vec3 camDir = glm::normalize(point - camera);
+	glm::vec3 up(0,1,0);
+	glm::vec3 right = glm::normalize(glm::cross(up, camDir));
+	glm::vec3 newUp = glm::normalize(glm::cross(camDir, right));
+
+	glm::mat3 newCamOr = glm::mat3(
+	-right,    // First column: right vector
+	newUp,       // Second column: up vector
+	-camDir // Third column: negative direction vector (looking direction)
+	);
+
+
+	camOr = newCamOr;
+
+
+}
+
+
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
 		if (event.key.keysym.sym == SDLK_LEFT) {
-			std::cout << "LEFT" << std::endl;
+			// std::cout << "LEFT" << std::endl;
 			camera[0] -= 0.1;
 		}
 		else if (event.key.keysym.sym == SDLK_RIGHT) {
-			std::cout << "RIGHT" << std::endl;
+			// std::cout << "RIGHT" << std::endl;
 			camera[0] += 0.1;
 
 		}
 		else if (event.key.keysym.sym == SDLK_UP) {
-			std::cout << "UP" << std::endl;
+			// std::cout << "UP" << std::endl;
 			camera[1] -= 0.1;
 		}
 		else if (event.key.keysym.sym == SDLK_DOWN) {
-			std::cout << "DOWN" << std::endl;
+			// std::cout << "DOWN" << std::endl;
 			camera[1] += 0.1;
 		}
 		else if (event.key.keysym.sym == SDLK_c) {
@@ -610,6 +646,33 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_s) {
 			camera[2] += 0.1;
 		}
+		else if (event.key.keysym.sym == SDLK_l) {
+			// rotate on x axis
+			camOr = rotateOrientation("x", 0.1, camOr);
+		}
+		else if (event.key.keysym.sym == SDLK_k) {
+			camOr = rotateOrientation("y", 0.1, camOr);;
+		}
+		else if (event.key.keysym.sym == SDLK_o) {
+				camOr = rotateOrientation("z", 0.1, camOr);
+		}
+		else if (event.key.keysym.sym == SDLK_v) {
+			lookAt = !lookAt;
+
+		}
+		else if (event.key.keysym.sym == SDLK_h) {
+			if (theta + 0.05 > M_PI*2) {
+				theta = 0.0;
+			}
+			else theta += 0.05;
+
+			float r = 4.0;
+			glm::vec3 centre(0,0,0);
+
+			camera.x = centre.x + std::cos(theta) * r;
+			camera.z = centre.z + std::sin(theta) * r;
+
+		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) {
 		window.savePPM("output.ppm");
 		window.saveBMP("output.bmp");
@@ -625,16 +688,36 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
 void draw(DrawingWindow &window, std::vector<ModelTriangle> model) {
 	window.clearPixels();
+
+	if (lookAt) {
+		camLookAt(glm::vec3(0, 0, 0));
+	}
+
+	// if (theta + 0.01 > M_PI*2) {
+	// 	theta = 0.0;
+	// }
+	// else theta += 0.01;
+
+
+	// orbit
+	// circle equasion  ( x - h )^2 + ( y - k )^2 = r^2, where ( h, k ) is the center and r is the radius.
+	// (h,k) = (0,0) r = 10
+
+	// float r = 10.0;
+	// glm::vec3 centre(0,0,0);
+	//
+	// camera.x = centre.x + std::cos(theta) * r;
+	// camera.z = centre.z + std::sin(theta) * r;
+
+
 	for (auto& row : zDepth) {
 		for (auto& elem : row) {
 			elem = -100000;
 		}
 	}
-	// rainbow(window);
-	// randomTriangle(window);
 
 	glm::vec3 modelOrigin = glm::vec3(0, 0, 0);
-	float scale = 160;
+	float scale = 500;
 
 	for (int i = 0; i < model.size(); i++) {
 		ModelTriangle tri = model.at(i);
@@ -668,8 +751,6 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> boxModel = parseObj("cornell-box.obj", "cornell-box.mtl", 0.35);
-
-
 
 
 
