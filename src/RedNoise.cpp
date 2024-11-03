@@ -6,6 +6,7 @@
 #include <iostream>
 #include <TextureMap.h>
 #include <vector>
+#include <limits>
 #include <bits/stdc++.h>
 #include <glm/detail/type_vec.hpp>
 #include <glm/detail/type_vec3.hpp>
@@ -23,17 +24,55 @@
 
 bool windowOpen = true;
 
+// camera
 glm::vec3 camera(0, 0, 4);
 glm::vec3 camDir(1, 1, 1);
 glm::mat3 camOr(1, 0, 0, 0, 1, 0, 0, 0, 1);
-// glm::mat3 modelOr(1,0,0,0,1,0,0,0,1);
+float cameraSpeed = 0.1;
+float focalLength = 2.0;
+
+// lighting
+// glm::vec3 lightSource(0, 0.7, 1);
+glm::vec3 lightSource(0, 0.9, 0);
+float ambientLightThresh = 0.2;
+float shadowDarkness = 0.3;
+bool moveLight = true;
+float specularExponent = 8;
+
+
 float theta = 0;
+float mouseSensitivity = 0.1;
+bool mouseMovement = false;
 
 std::vector<std::vector<float> > zDepth(WIDTH, std::vector<float>(HEIGHT, -10000));
 
-float focalLength = 2.0;
 
 bool lookAt = false;
+
+enum Mode {
+    WireFrame,
+    Rasterized,
+    RayTraced
+};
+
+
+Mode renderMode = RayTraced;
+
+void processMouseMovement(int xRot, int yRot) {
+    // Convert offsets to radians and apply sensitivity
+    float xAngle = glm::radians(xRot * mouseSensitivity);
+    float yAngle = glm::radians(yRot * mouseSensitivity);
+
+    // Rotate around the up axis (Y) for horizontal mouse movement
+    camOr = rotateOrientation("y", xAngle, camOr);
+
+    // Rotate around the right axis (X) for vertical mouse movement
+    glm::vec3 right = camOr[0]; // Assuming first column is the right direction
+    camOr = rotateOrientation("x", yAngle, camOr);
+
+    // prevent drift by making forward, up and right are orthogonal to eachoter
+    camOr = orthonormalize(camOr);
+}
 
 bool pointInCanvas(CanvasPoint point, DrawingWindow &window) {
     return ((point.x < window.width - 1) && (point.y < window.height - 1) && (point.y >= 0) && (point.x >= 0));
@@ -576,12 +615,16 @@ void camLookAt(glm::vec3 point) {
     camOr = newCamOr;
 }
 
-RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std::vector<ModelTriangle> modelTriangles) {
+RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std::vector<ModelTriangle> modelTriangles,
+                                                    glm::vec3 rayOrigin) {
     glm::vec3 closestSolution;
     ModelTriangle closestTriangle;
     size_t closestTriangleIndex = 0;
     bool validIntersection = false;
     int validIntersections = 0;
+    float epsilion = 1e-6f;
+
+    rayDirection = normalize(rayDirection);
 
     for (int i = 0; i < modelTriangles.size(); i++) {
         validIntersection = false;
@@ -589,24 +632,28 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
         ModelTriangle triangle = modelTriangles.at(i);
         glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
         glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
-        glm::vec3 SPVector = camera - triangle.vertices[0];
+        glm::vec3 SPVector = rayOrigin - triangle.vertices[0];
+
         glm::mat3 DEMatrix(-rayDirection, e0, e1);
 
-        glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
-        float t = possibleSolution[0];
-        float u = possibleSolution[1];
-        float v = possibleSolution[2];
+        // Check if matrix is invertible
+        float det = glm::determinant(DEMatrix);
+        if (std::abs(det) < epsilion) continue;
 
-        // check for valid intersection
-        if ((u >= 0.0) && (u <= 1.0)) {
-            if ((v >= 0.0) && (v <= 1.0)) {
-                if ((u + v) <= 1.0) {
-                    if (t >= 0.0) {
-                        validIntersection = true;
-                        validIntersections++;
-                    }
-                }
-            }
+        glm::vec3 possibleSolution = inverse(DEMatrix) * SPVector;
+
+
+        float t = possibleSolution.x; // distance
+        float u = possibleSolution.y; // barycentric coordinate
+        float v = possibleSolution.z; // barycentric coordinate
+
+        // check for valid intersection with numerical stability
+        if (t >= 0.0f && // Intersection is in front of ray origin
+            u >= -epsilion && u <= 1.0f + epsilion && // Added epsilon for floating point comparison
+            v >= -epsilion && v <= 1.0f + epsilion && // Added epsilon for floating point comparison
+            (u + v) <= 1.0f + epsilion) {
+            validIntersection = true;
+            validIntersections++;
         }
 
 
@@ -614,9 +661,11 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
             if (validIntersections == 1) {
                 closestSolution = possibleSolution;
                 closestTriangle = triangle;
+                closestTriangleIndex = i;
             } else {
-                if (possibleSolution.x < closestSolution.x) {
-                    closestSolution.x = possibleSolution.x;
+                // if distance of possible solution is shorter than current closest solution
+                if (std::abs(t) < std::abs(closestSolution.x)) {
+                    closestSolution = possibleSolution;
                     closestTriangle = triangle;
                     closestTriangleIndex = i;
                 }
@@ -624,22 +673,46 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
         }
     }
 
-    // no valid intersections found
-    // all invalid intersections will have a distance of 1
+    // no valid intersections found - return will have distanceFromCamera = negative infinity
     if (validIntersections == 0) {
         RayTriangleIntersection invalid = RayTriangleIntersection();
-        invalid.distanceFromCamera = -1;
+        invalid.distanceFromCamera = -std::numeric_limits<float>::infinity();
+
         return invalid;
     }
 
+    float t = closestSolution.x; // distance
+    float u = closestSolution.y; // barycentric coordinate
+    float v = closestSolution.z; // barycentric coordinate
 
-    glm::vec3 a = closestSolution[1] * (closestTriangle.vertices[1] - closestTriangle.vertices[0]);
-    glm::vec3 b = closestSolution[2] * (closestTriangle.vertices[2] - closestTriangle.vertices[0]);
+
+    glm::vec3 a = u * (closestTriangle.vertices[1] - closestTriangle.vertices[0]);
+    glm::vec3 b = v * (closestTriangle.vertices[2] - closestTriangle.vertices[0]);
 
     glm::vec3 closestPoint = closestTriangle.vertices[0] + a + b;
     RayTriangleIntersection closestIntersection = RayTriangleIntersection(
-        closestPoint, closestSolution[0], closestTriangle, closestTriangleIndex);
+        closestPoint, t, closestTriangle, closestTriangleIndex);
+
     return closestIntersection;
+}
+
+void drawWireframeModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale, DrawingWindow &window) {
+    for (int i = 0; i < model.size(); i++) {
+        ModelTriangle tri = model.at(i);
+        Colour colour = tri.colour;
+        // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
+        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera, tri.vertices[0]);
+        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera, tri.vertices[1]);
+        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera, tri.vertices[2]);
+
+
+        CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, focalLength, scale, window);
+        CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, focalLength, scale, window);
+        CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, focalLength, scale, window);
+
+        // if (pointInCanvas(canp1, window) and pointInCanvas(canp2, window) and pointInCanvas(canp3, window)) {
+        drawTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
+    }
 }
 
 void drawRasterizedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale, DrawingWindow &window) {
@@ -662,83 +735,178 @@ void drawRasterizedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin
 }
 
 void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale, DrawingWindow &window) {
-    // move verticies to model origin
+    // change model coordinate system
+    std::vector<glm::vec3> triangleNormals;
 
     for (int i = 0; i < model.size(); i++) {
         ModelTriangle tri = model.at(i);
         // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
 
-        glm::vec3 vert1 = tri.vertices[0];
-        glm::vec3 vert2 = tri.vertices[1];
-        glm::vec3 vert3 = tri.vertices[2];
+        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera, tri.vertices[0]);
+        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera, tri.vertices[1]);;
+        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera, tri.vertices[2]);
 
-        // Move the vertices to the model origin
-        model[i].vertices[0] = changeCoordSystem(modelOrigin, camera, vert1);
-        model[i].vertices[1] = changeCoordSystem(modelOrigin, camera, vert2);
-        model[i].vertices[2] = changeCoordSystem(modelOrigin, camera, vert3);
+        model[i].vertices[0] = vert1;
+        model[i].vertices[1] = vert2;
+        model[i].vertices[2] = vert3;
+
+        triangleNormals.push_back(triangleNormal(vert1, vert2, vert3));
     }
 
-    float z = -focalLength / scale;
-    CanvasPoint canvasCentre(window.width / 2, window.height / 2);
+    float z = -focalLength;
+    CanvasPoint canvasCentre((window.width / 2), (window.height / 2));
 
     for (int i = 0; i < window.width; i++) {
         for (int j = 0; j < window.height; j++) {
+            CanvasPoint pixelLocation = CanvasPoint(i, j);
+
+            // // calculate unit vector from camera to current pixel
             float x = (i - canvasCentre.x) / scale;
-            float y = (canvasCentre.y - j) / scale;
+            float y = -(j - canvasCentre.y) / scale;
+
             glm::vec3 canvasPointLocation3D = glm::vec3(x, y, z);
 
-            glm::vec3 rayDir = glm::normalize(canvasPointLocation3D - camera);
-            RayTriangleIntersection intersection = getClosestValidIntersection(rayDir, model);
+            // apply camera orientation
+            // direction of ray from camera to pixel
+            glm::vec3 rayDir = normalize(camOr * canvasPointLocation3D - camera);
 
 
-            if (intersection.distanceFromCamera != -1) {
-                drawCanvasPoint(CanvasPoint(i, j), intersection.intersectedTriangle.colour, window);
-                // std::cout << intersection.intersectedTriangle.colour << std::endl;
+            //find the closest intersection with a model triangle
+            RayTriangleIntersection intersection = getClosestValidIntersection(rayDir, model, camera);
+
+
+            // if not invalid intersection
+            if (intersection.distanceFromCamera > 0) {
+                // change light source position from world coordinates to camera coordinates
+                glm::vec3 light = changeCoordSystem(glm::vec3(0, 0, 0), camera, lightSource);
+                // light = lightSource;
+
+                float epsilon = 0.001;
+                glm::vec3 pointToLightRayDir = normalize(light - intersection.intersectionPoint);
+                glm::vec3 shadowRayOrigin = intersection.intersectionPoint + pointToLightRayDir * epsilon;
+                RayTriangleIntersection shadowRayIntersection =
+                        getClosestValidIntersection(pointToLightRayDir, model, shadowRayOrigin);
+
+                // calculate proximity brightness
+                float distanceFromLight = length(shadowRayOrigin - light);
+                float brightness;
+                if (distanceFromLight < 0.0000001) {
+                    brightness = 1;
+                } else {
+                    brightness = 50.0f / (4 * M_PI * distanceFromLight * distanceFromLight);
+                    // cap between 0-1
+                    // brightness = std::min(brightness, 1.0f);
+                    brightness = std::max(0.0f, brightness);
+                }
+
+                // angle of incidence brightness
+                float aoiBrightness = dot(pointToLightRayDir, triangleNormals[intersection.triangleIndex]);
+                // cap between 0-1
+                // aoiBrightness = std::min(aoiBrightness, 1.0f);
+                aoiBrightness = std::max(0.0f, aoiBrightness);
+
+                //combine proximity brightness and aoi brighness
+
+
+                //specular brightness
+                glm::vec3 reflectionDir = reflect(-pointToLightRayDir, triangleNormals[intersection.triangleIndex]);
+                glm::vec3 pointToCameraDir = -rayDir;
+                float specularBrightness = std::pow(dot(pointToCameraDir, reflectionDir), specularExponent);
+                specularBrightness = std::max(specularBrightness, 0.0f);
+
+                brightness = brightness * aoiBrightness;
+                // brightness = aoiBrightness;
+
+                // apply ambient light threshold
+                brightness = std::min(1.0f, brightness);
+                brightness = std::max(ambientLightThresh, brightness);
+
+                Colour pixelColour = intersection.intersectedTriangle.colour;
+                pixelColour.red = std::min(pixelColour.red * brightness + specularBrightness * 100, 255.0f);
+                pixelColour.green = std::min(pixelColour.green * brightness + specularBrightness * 100, 255.0f);
+                pixelColour.blue = std::min(pixelColour.blue * brightness + specularBrightness * 100, 255.0f);
+
+                // if in shadow
+                if (!(shadowRayIntersection.triangleIndex == intersection.triangleIndex or shadowRayIntersection.
+                      distanceFromCamera == -std::numeric_limits<float>::infinity())) {
+                    // in shadow
+                    // pixelColour.red *= shadowDarkness;
+                    // pixelColour.green *= shadowDarkness;
+                    // pixelColour.blue *= shadowDarkness;
+
+                    pixelColour = shadowRayIntersection.intersectedTriangle.colour;
+                }
+
+                drawCanvasPoint(pixelLocation, pixelColour, window);
             }
-
-            // window.renderFrame();
         }
     }
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
-        if (event.key.keysym.sym == SDLK_LEFT) {
-            // std::cout << "LEFT" << std::endl;
-            camera[0] -= 0.1;
-        } else if (event.key.keysym.sym == SDLK_RIGHT) {
-            // std::cout << "RIGHT" << std::endl;
-            camera[0] += 0.1;
-        } else if (event.key.keysym.sym == SDLK_UP) {
-            // std::cout << "UP" << std::endl;
-            camera[1] -= 0.1;
-        } else if (event.key.keysym.sym == SDLK_DOWN) {
-            // std::cout << "DOWN" << std::endl;
-            camera[1] += 0.1;
-        } else if (event.key.keysym.sym == SDLK_c) {
-            std::cout << "closing" << std::endl;
-            windowOpen = false;
-        } else if (event.key.keysym.sym == SDLK_u) {
-            std::cout << "generate random triangle" << std::endl;
-            randomTriangle(window);
-        } else if (event.key.keysym.sym == SDLK_1) {
-            focalLength += 0.2;
-        } else if (event.key.keysym.sym == SDLK_2) {
-            focalLength -= 0.2;
+        if (event.key.keysym.sym == SDLK_a) {
+            // left
+            glm::vec3 right = glm::vec3(camOr[0][0], camOr[1][0], camOr[2][0]);
+            if (moveLight) {
+                lightSource -= cameraSpeed * right;
+            } else {
+                camera -= cameraSpeed * right;
+            }
+        } else if (event.key.keysym.sym == SDLK_d) {
+            // right
+            glm::vec3 right = glm::vec3(camOr[0][0], camOr[1][0], camOr[2][0]);
+            if (moveLight) {
+                lightSource += cameraSpeed * right;
+            } else {
+                camera += cameraSpeed * right;
+            }
+        } else if (event.key.keysym.sym == SDLK_SPACE) {
+            // up
+            glm::vec3 up = glm::vec3(camOr[0][1], camOr[1][1], camOr[2][1]);
+            if (moveLight) {
+                lightSource += cameraSpeed * up;
+            } else {
+                camera += cameraSpeed * up;
+            }
+        } else if (event.key.keysym.sym == SDLK_LSHIFT) {
+            // down
+            glm::vec3 up = glm::vec3(camOr[0][1], camOr[1][1], camOr[2][1]);
+            if (moveLight) {
+                lightSource -= cameraSpeed * up;
+            } else {
+                camera -= cameraSpeed * up;
+            }
         } else if (event.key.keysym.sym == SDLK_w) {
-            camera[2] -= 0.1;
+            // forward
+            glm::vec3 forward = glm::vec3(camOr[0][2], camOr[1][2], camOr[2][2]);
+            if (moveLight) {
+                lightSource -= cameraSpeed * forward;
+            } else {
+                camera -= cameraSpeed * forward;
+            }
         } else if (event.key.keysym.sym == SDLK_s) {
-            camera[2] += 0.1;
+            // backward
+            glm::vec3 forward = glm::vec3(camOr[0][2], camOr[1][2], camOr[2][2]);
+            if (moveLight) {
+                lightSource += cameraSpeed * forward;
+            } else {
+                camera += cameraSpeed * forward;
+            }
         } else if (event.key.keysym.sym == SDLK_l) {
             // rotate on x axis
             camOr = rotateOrientation("x", 0.1, camOr);
         } else if (event.key.keysym.sym == SDLK_k) {
+            // rotate on y axis
             camOr = rotateOrientation("y", 0.1, camOr);;
         } else if (event.key.keysym.sym == SDLK_o) {
+            // rotate on z axis
             camOr = rotateOrientation("z", 0.1, camOr);
         } else if (event.key.keysym.sym == SDLK_v) {
+            // toggle lookAt
             lookAt = !lookAt;
         } else if (event.key.keysym.sym == SDLK_h) {
+            // spin around model
             if (theta + 0.05 > M_PI * 2) {
                 theta = 0.0;
             } else theta += 0.05;
@@ -748,6 +916,21 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
             camera.x = centre.x + std::cos(theta) * r;
             camera.z = centre.z + std::sin(theta) * r;
+        } else if (event.key.keysym.sym == SDLK_6) {
+            renderMode = WireFrame;
+        } else if (event.key.keysym.sym == SDLK_7) {
+            renderMode = Rasterized;
+        } else if (event.key.keysym.sym == SDLK_8) {
+            renderMode = RayTraced;
+        } else if (event.key.keysym.sym == SDLK_t) {
+            // toggle mouse
+            mouseMovement = !mouseMovement;
+        } else if (event.key.keysym.sym == SDLK_m) {
+            // toggle move light
+            moveLight = !moveLight;
+        } else if (event.key.keysym.sym == SDLK_p) {
+            // print light source position
+            std::cout << glm::to_string(lightSource) << std::endl;
         }
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
@@ -756,6 +939,16 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
         if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
             std::cout << "Quiting" << std::endl;
             windowOpen = false;
+        }
+    } else if (event.type == SDL_MOUSEMOTION) {
+        // Get the relative movement of the mouse
+        // std::cout << "mouse moved" << std::endl;
+        if (mouseMovement) {
+            int xOffset = event.motion.xrel;
+            int yOffset = event.motion.yrel;
+
+            // Update camera orientation based on mouse movement
+            // processMouseMovement(xOffset, yOffset);
         }
     }
 }
@@ -779,8 +972,13 @@ void draw(DrawingWindow &window, std::vector<ModelTriangle> model) {
         camLookAt(modelOrigin);
     }
 
-    // drawRasterizedModel(model, modelOrigin, scale, window);
-    drawRayTracedModel(model, modelOrigin, scale, window);
+    if (renderMode == WireFrame) {
+        drawWireframeModel(model, modelOrigin, scale, window);
+    } else if (renderMode == Rasterized) {
+        drawRasterizedModel(model, modelOrigin, scale, window);
+    } else if (renderMode == RayTraced) {
+        drawRayTracedModel(model, modelOrigin, scale, window);
+    }
 }
 
 

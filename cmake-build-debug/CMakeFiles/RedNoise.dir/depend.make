@@ -482,6 +482,7 @@ CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/CanvasTriangle.h
 CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/Colour.h
 CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/DrawingWindow.h
 CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/ModelTriangle.h
+CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/RayTriangleIntersection.h
 CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/TextureMap.h
 CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/TexturePoint.h
 CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o: ../libs/sdw/Utils.h

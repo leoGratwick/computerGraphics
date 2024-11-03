@@ -788,6 +788,14 @@ Colour.h
 TexturePoint.h
 ../libs/sdw/TexturePoint.h
 
+../libs/sdw/RayTriangleIntersection.h
+glm/glm.hpp
+-
+iostream
+-
+ModelTriangle.h
+../libs/sdw/ModelTriangle.h
+
 ../libs/sdw/TextureMap.h
 iostream
 -
@@ -859,6 +867,8 @@ TextureMap.h
 -
 vector
 -
+limits
+-
 bits/stdc++.h
 -
 glm/detail/type_vec.hpp
@@ -875,6 +885,8 @@ cerrno
 -
 Helpers.h
 /mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/Helpers.h
+RayTriangleIntersection.h
+/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/src/RayTriangleIntersection.h
 
 /usr/include/SDL2/SDL.h
 SDL_main.h

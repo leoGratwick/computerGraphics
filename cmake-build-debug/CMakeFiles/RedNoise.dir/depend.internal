@@ -483,6 +483,7 @@ CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o
  ../libs/sdw/Colour.h
  ../libs/sdw/DrawingWindow.h
  ../libs/sdw/ModelTriangle.h
+ ../libs/sdw/RayTriangleIntersection.h
  ../libs/sdw/TextureMap.h
  ../libs/sdw/TexturePoint.h
  ../libs/sdw/Utils.h
