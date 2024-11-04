@@ -16,13 +16,16 @@
 #include <cerrno>
 #include "Helpers.h"
 #include "RayTriangleIntersection.h"
+#include "ModelLoader.h"
 
 #define WIDTH 900
 #define HEIGHT 900
 
 // GLOBAL VARS
 
+// window
 bool windowOpen = true;
+
 
 // camera
 glm::vec3 camera(0, 0, 4);
@@ -30,6 +33,10 @@ glm::vec3 camDir(1, 1, 1);
 glm::mat3 camOr(1, 0, 0, 0, 1, 0, 0, 0, 1);
 float cameraSpeed = 0.1;
 float focalLength = 2.0;
+bool lookAt = false;
+// for rotation
+float theta = 0;
+
 
 // lighting
 // glm::vec3 lightSource(0, 0.7, 1);
@@ -40,162 +47,35 @@ bool moveLight = true;
 float specularExponent = 8;
 
 
-float theta = 0;
-float mouseSensitivity = 0.1;
-bool mouseMovement = false;
-
+// depth buffer
 std::vector<std::vector<float> > zDepth(WIDTH, std::vector<float>(HEIGHT, -10000));
 
 
-bool lookAt = false;
-
+// Render Mode
 enum Mode {
     WireFrame,
     Rasterized,
     RayTraced
 };
 
-
 Mode renderMode = RayTraced;
 
-void processMouseMovement(int xRot, int yRot) {
-    // Convert offsets to radians and apply sensitivity
-    float xAngle = glm::radians(xRot * mouseSensitivity);
-    float yAngle = glm::radians(yRot * mouseSensitivity);
-
-    // Rotate around the up axis (Y) for horizontal mouse movement
-    camOr = rotateOrientation("y", xAngle, camOr);
-
-    // Rotate around the right axis (X) for vertical mouse movement
-    glm::vec3 right = camOr[0]; // Assuming first column is the right direction
-    camOr = rotateOrientation("x", yAngle, camOr);
-
-    // prevent drift by making forward, up and right are orthogonal to eachoter
-    camOr = orthonormalize(camOr);
-}
-
-bool pointInCanvas(CanvasPoint point, DrawingWindow &window) {
-    return ((point.x < window.width - 1) && (point.y < window.height - 1) && (point.y >= 0) && (point.x >= 0));
-}
-
-std::map<std::string, Colour> createPalette(std::string filename) {
-    std::map<std::string, Colour> palette;
-    std::ifstream file(filename);
-    std::string line;
-
-    if (file.is_open()) {
-        while (std::getline(file, line)) {
-            if (line.substr(0, 6) == "newmtl") {
-                std::vector<std::string> tokens = splitByDelimiter(line, ' ');
-                std::string name = tokens.at(1);
-
-                getline(file, line);
-                std::vector<std::string> colourVals = splitByDelimiter(line, ' ');
-
-                // convert from 0-1 to 0-225 for rgb values
-                int r = std::round(std::stof(colourVals.at(1)) * 225);
-                int g = std::round(std::stof(colourVals.at(2)) * 225);
-                int b = std::round(std::stof(colourVals.at(3)) * 225);
-                palette[name] = Colour(r, g, b);
-                // std::cout << name << " added to palette as " << Colour(r,g,b)<< std::endl;
-            }
-        }
-        file.close();
-    } else {
-        std::cerr << "Could not open file " << filename << std::endl;
-    }
-    return palette;
-}
-
-std::vector<ModelTriangle> parseObj(std::string objFilename, std::string mtlFilename, float scale) {
-    std::map<std::string, Colour> palette = createPalette(mtlFilename);
-    std::ifstream file(objFilename);
-    std::vector<ModelTriangle> tris = {};
-    std::string line;
-    ModelTriangle tri;
-    std::vector<glm::vec3> vertices = {};
-    std::vector<std::vector<std::string> > faces = {};
-    std::string col;
-
-
-    if (file.is_open()) {
-        while (std::getline(file, line)) {
-            // std::cout << line << std::endl;
-
-            // add verticies
-            if (line[0] == 'v') {
-                std::vector<std::string> nums = splitByDelimiter(line, ' ');
-                try {
-                    float x = std::stof(nums.at(1)) * scale;
-                    float y = std::stof(nums.at(2)) * scale;
-                    float z = std::stof(nums.at(3)) * scale;
-                    // std::cout << x << y << z << std::endl;
-                    glm::vec3 vert(x, y, z);
-                    // std::cout << line << std::endl;
-                    // std::cout << vert.x << vert.y << vert.z << std::endl;
-                    vertices.push_back(vert);
-                } catch (...) {
-                    std::cout << "couldn't convert from string to float - vert" << std::endl;
-                    return tris;
-                }
-            }
-            // add faces
-            else if (line[0] == 'f') {
-                std::vector<std::string> nums = splitByDelimiter(line, ' ');
-                try {
-                    nums.at(1).pop_back();
-                    nums.at(2).pop_back();
-                    nums.at(3).pop_back();
-                    std::vector<std::string> face = {};
-                    face.push_back(nums.at(1));
-                    face.push_back(nums.at(2));
-                    face.push_back(nums.at(3));
-                    face.push_back(col);
-                    faces.push_back(face);
-                } catch (...) {
-                    std::cout << "couldn't convert from string to float - face" << std::endl;
-                    return tris;
-                }
-            } else if (line.substr(0, 6) == "usemtl") {
-                // changing current coulur
-                std::vector<std::string> tokens = splitByDelimiter(line, ' ');
-                std::string name = tokens.at(1);
-                col = name;
-            }
-        }
-
-        file.close();
-
-        // add every face along with its colour
-        for (int i = 0; i < faces.size(); i++) {
-            int v1loc = std::stoi(faces.at(i)[0]) - 1;
-            glm::vec3 vert1(vertices.at(v1loc));
-            int v2loc = std::stoi(faces.at(i)[1]) - 1;
-            glm::vec3 vert2(vertices.at(v2loc));
-            int v3loc = std::stoi(faces.at(i)[2]) - 1;
-            glm::vec3 vert3(vertices.at(v3loc));
-            std::string colour = faces.at(i)[3];
-            ModelTriangle tri = ModelTriangle(vert1, vert2, vert3, palette[colour]);
-            // std::cout << tri << palette[colour] << std::endl;
-            tris.push_back(tri);
-        }
-    } else {
-        std::cerr << "Could not open file " << objFilename << std::endl;
-    }
-    return tris;
-}
 
 void drawCanvasPoint(CanvasPoint point, Colour col, DrawingWindow &window) {
     if (pointInCanvas(point, window)) {
+        // round coordinates to pixel values
         int x = std::round(point.x);
         int y = std::round(point.y);
 
+        uint32_t colour = colourToInt(col);
+
+        // check depth buffer
         if (point.depth == 0) {
-            uint32_t colour = (255 << 24) + (int(col.red) << 16) + (int(col.green) << 8) + int(col.blue);
             window.setPixelColour(x, y, colour);
             zDepth[x][y] = 0;
-        } else if (zDepth[x][y] < 1 / point.depth && !zDepth[x][y] == 0) {
-            uint32_t colour = (255 << 24) + (int(col.red) << 16) + (int(col.green) << 8) + int(col.blue);
+        }
+        // check if point is closer than current point on that pixel
+        else if ((zDepth[x][y] < 1 / point.depth) && !(zDepth[x][y] == 0)) {
             window.setPixelColour(x, y, colour);
             zDepth[x][y] = 1 / point.depth;
         }
@@ -204,13 +84,17 @@ void drawCanvasPoint(CanvasPoint point, Colour col, DrawingWindow &window) {
 
 void drawCanvasPointUint(CanvasPoint point, uint32_t col, DrawingWindow &window) {
     if (pointInCanvas(point, window)) {
+        // round coordinates to pixel values
         int x = std::round(point.x);
         int y = std::round(point.y);
 
+        // check depth buffer
         if (point.depth == 0) {
             window.setPixelColour(x, y, col);
             zDepth[x][y] = 0;
-        } else if (zDepth[x][y] < 1 / point.depth && !zDepth[x][y] == 0) {
+        }
+        // check if point is closer than current point on that pixel
+        else if ((zDepth[x][y] < 1 / point.depth) && !(zDepth[x][y] == 0)) {
             window.setPixelColour(x, y, col);
             zDepth[x][y] = 1 / point.depth;
         }
@@ -218,24 +102,27 @@ void drawCanvasPointUint(CanvasPoint point, uint32_t col, DrawingWindow &window)
 }
 
 void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour colour) {
-    // std::cout << "drawing line from: " << from.x << ", " << from.y << " to: " << to.x << ", " << to.y << std::endl;
+    // if the line is a point
     if (from.x == to.x and to.y == from.y) {
         drawCanvasPoint(from, colour, window);
         return;
     }
+
     float xDiff = to.x - from.x;
     float yDiff = to.y - from.y;
+
+    // number of points to be drawn, multiply by 2 to avoid gaps
     int steps = std::max(std::abs(xDiff), std::abs(yDiff)) * 2;
     float xStep = xDiff / steps;
     float yStep = yDiff / steps;
-    // std::vector<float> lerpX = interpolateSingleFloats(from.x, to.x, range);
-    // std::vector<float> lerpY = interpolateSingleFloats(from.y, to.y, range);
-    std::vector<float> lerpDepths = interpolateSingleFloats(from.depth, to.depth, steps);
 
+    // interpolate point depths
+    std::vector<float> lerpDepths = lerpSingleFloats(from.depth, to.depth, steps);
+
+    // draw each point on the line
     for (int i = 0; i < steps; i++) {
         CanvasPoint point = CanvasPoint(from.x + i * xStep, from.y + i * yStep);
         point.depth = lerpDepths.at(i);
-        // std::cout << "drawing point: " << point << std::endl;
         drawCanvasPoint(point, colour, window);
     }
 }
@@ -247,31 +134,27 @@ void drawTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
 }
 
 void fillFlatBottomTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
-    // std::cout << "drawing flat bottom triangle" << std::endl;
-    // the first vertex is at the top of the triangle
+    // outline triangle to avoid gaps
     drawTriangle(window, triangle, colour);
-    drawTriangle(window, triangle, colour);
-
+    // the v0 is at the top of the triangle
     CanvasPoint v0 = triangle.v0();
     CanvasPoint v1 = triangle.v1();
     CanvasPoint v2 = triangle.v2();
 
-
+    // calculate x slope dx/dy
     float slope1 = (v1.x - v0.x) / (v1.y - v0.y);
     float slope2 = (v2.x - v0.x) / (v2.y - v0.y);
-
-    std::string dir1;
-    std::string dir2;
-
 
     float currentX1 = v0.x;
     float currentX2 = v0.x;
 
-    std::vector<float> depths1 = interpolateSingleFloats(v0.depth, v1.depth, std::round(v1.y) - std::round(v0.y));
-    std::vector<float> depths2 = interpolateSingleFloats(v0.depth, v2.depth, std::round(v1.y) - std::round(v0.y));
+    // interpolate depths
+    std::vector<float> depths1 = lerpSingleFloats(v0.depth, v1.depth, std::round(v1.y) - std::round(v0.y));
+    std::vector<float> depths2 = lerpSingleFloats(v0.depth, v2.depth, std::round(v1.y) - std::round(v0.y));
 
     int depthCount = 0;
 
+    // draw a line from currentX1 to currentX2 for each y value
     for (int y = std::round(v0.y); y < std::round(v1.y); y++) {
         CanvasPoint from = CanvasPoint(currentX1, y);
         from.depth = depths1.at(depthCount);
@@ -279,8 +162,9 @@ void fillFlatBottomTriangle(DrawingWindow &window, CanvasTriangle triangle, Colo
         CanvasPoint to = CanvasPoint(currentX2, y);
         to.depth = depths2.at(depthCount);
 
-
         drawLine(window, from, to, colour);
+
+        // update vars
         currentX1 += slope1;
         currentX2 += slope2;
         depthCount += 1;
@@ -288,33 +172,38 @@ void fillFlatBottomTriangle(DrawingWindow &window, CanvasTriangle triangle, Colo
 }
 
 void fillFlatTopTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
-    // std::cout << "drawing flat top filled triangle" << std::endl;
+    // draw triangle outline to avoid gaps
     drawTriangle(window, triangle, colour);
+
     // v2 is the bottom vertex
     CanvasPoint v0 = triangle.v0();
     CanvasPoint v1 = triangle.v1();
     CanvasPoint v2 = triangle.v2();
 
-
+    // calculate x slope dx/dy
     float slope1 = (v0.x - v2.x) / (v0.y - v2.y);
     float slope2 = (v1.x - v2.x) / (v1.y - v2.y);
 
     float currentX1 = v2.x;
     float currentX2 = v2.x;
 
-    std::vector<float> depths1 = interpolateSingleFloats(v2.depth, v0.depth, std::round(v2.y) - std::round(v1.y));
-    std::vector<float> depths2 = interpolateSingleFloats(v2.depth, v1.depth, std::round(v2.y) - std::round(v1.y));
+    // interpolate depths
+    std::vector<float> depths1 = lerpSingleFloats(v2.depth, v0.depth, std::round(v2.y) - std::round(v1.y));
+    std::vector<float> depths2 = lerpSingleFloats(v2.depth, v1.depth, std::round(v2.y) - std::round(v1.y));
 
     int depthCount = 0;
 
+    // draw a line from currentX1 to currentX2 for each y value
     for (int y = std::round(v2.y); y > std::round(v1.y); y--) {
         CanvasPoint from = CanvasPoint(currentX1, y);
         from.depth = depths1.at(depthCount);
 
         CanvasPoint to = CanvasPoint(currentX2, y);
         to.depth = depths2.at(depthCount);
-        // std::cout << "from: "<< from << " to: " << to << std::endl;
+
         drawLine(window, from, to, colour);
+
+        // update vars
         currentX1 -= slope1;
         currentX2 -= slope2;
         depthCount += 1;
@@ -324,6 +213,7 @@ void fillFlatTopTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour 
 void fillTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
     std::vector<CanvasPoint> verts = {triangle.v0(), triangle.v1(), triangle.v2()};
 
+    // draw triangle outline to avoid gaps
     drawTriangle(window, triangle, colour);
 
     // sort verticies by y coordinate
@@ -332,11 +222,8 @@ void fillTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
     });
 
     CanvasPoint v0 = verts[0];;
-    // std::cout << v0 << std::endl;
     CanvasPoint v1 = verts[1];
-    // std::cout << v1 << std::endl;
     CanvasPoint v2 = verts[2];
-    // std::cout << v2 << std::endl;
 
     // flat bottom triangle
     if (v2.y == v1.y) {
@@ -350,26 +237,35 @@ void fillTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour)
     }
     // all other triangles
     else {
+        // calculate the extra point to split the triangle into a flat bottom and flat top triangle
         float m = (v2.y - v0.y) / (v2.x - v0.x);
         float x = (v1.y - v0.y) / m + v0.x;
         CanvasPoint v3 = CanvasPoint(x, v1.y);
+
+        // calculate depth of extra point
         float sp = splitPercent(v0, v2, v3);
         v3.depth = v0.depth + (v2.depth - v0.depth) * sp;
-        // std::cout << v3 << std::endl;
+
+        // draw flat-bottomed triangle
         CanvasTriangle flatBottomTri = CanvasTriangle(v0, v1, v3);
         fillFlatBottomTriangle(window, flatBottomTri, colour);
 
+        // draw flat-topped triangle
         CanvasTriangle flatTopTri = CanvasTriangle(v1, v3, v2);
         fillFlatTopTriangle(window, flatTopTri, colour);
     }
 }
 
 void randomTriangle(DrawingWindow &window) {
+    // draw a random triangle with white outline
+
     CanvasPoint v0 = CanvasPoint(rand() % (window.width - 1), rand() % (window.height - 1));
     CanvasPoint v1 = CanvasPoint(rand() % (window.width - 1), rand() % (window.height - 1));
     CanvasPoint v2 = CanvasPoint(rand() % (window.width - 1), rand() % (window.height - 1));
     Colour randomCol = Colour(rand() % 255, rand() % 255, rand() % 255);
+
     CanvasTriangle randomTriangle = CanvasTriangle(v0, v1, v2);
+
     fillTriangle(window, randomTriangle, randomCol);
     drawTriangle(window, randomTriangle, Colour(255, 255, 255));
     window.renderFrame();
@@ -377,8 +273,6 @@ void randomTriangle(DrawingWindow &window) {
 
 void textureFlatBottomTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, TextureMap textureMap,
                                CanvasTriangle textureTriangle) {
-    std::cout << "drawing textured flat bottom triangle" << std::endl;
-
     CanvasPoint v0 = drawingTriangle.v0();
     CanvasPoint v1 = drawingTriangle.v1();
     CanvasPoint v2 = drawingTriangle.v2();
@@ -716,6 +610,12 @@ void drawWireframeModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
 }
 
 void drawRasterizedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale, DrawingWindow &window) {
+    // initialise depth buffer
+    for (auto &row: zDepth) {
+        for (auto &elem: row) {
+            elem = -std::numeric_limits<float>::infinity();
+        }
+    }
     for (int i = 0; i < model.size(); i++) {
         ModelTriangle tri = model.at(i);
         Colour colour = tri.colour;
@@ -844,7 +744,9 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
+    // handle key presses
     if (event.type == SDL_KEYDOWN) {
+        // camera and light source movement
         if (event.key.keysym.sym == SDLK_a) {
             // left
             glm::vec3 right = glm::vec3(camOr[0][0], camOr[1][0], camOr[2][0]);
@@ -902,9 +804,6 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
         } else if (event.key.keysym.sym == SDLK_o) {
             // rotate on z axis
             camOr = rotateOrientation("z", 0.1, camOr);
-        } else if (event.key.keysym.sym == SDLK_v) {
-            // toggle lookAt
-            lookAt = !lookAt;
         } else if (event.key.keysym.sym == SDLK_h) {
             // spin around model
             if (theta + 0.05 > M_PI * 2) {
@@ -916,61 +815,41 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 
             camera.x = centre.x + std::cos(theta) * r;
             camera.z = centre.z + std::sin(theta) * r;
-        } else if (event.key.keysym.sym == SDLK_6) {
-            renderMode = WireFrame;
-        } else if (event.key.keysym.sym == SDLK_7) {
-            renderMode = Rasterized;
-        } else if (event.key.keysym.sym == SDLK_8) {
-            renderMode = RayTraced;
-        } else if (event.key.keysym.sym == SDLK_t) {
-            // toggle mouse
-            mouseMovement = !mouseMovement;
+        } else if (event.key.keysym.sym == SDLK_v) {
+            // toggle lookAt
+            lookAt = !lookAt;
         } else if (event.key.keysym.sym == SDLK_m) {
             // toggle move light
             moveLight = !moveLight;
         } else if (event.key.keysym.sym == SDLK_p) {
             // print light source position
-            std::cout << glm::to_string(lightSource) << std::endl;
+            std::cout << to_string(lightSource) << std::endl;
         }
-    } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+
+        // Change Render Type
+        else if (event.key.keysym.sym == SDLK_6) {
+            renderMode = WireFrame;
+        } else if (event.key.keysym.sym == SDLK_7) {
+            renderMode = Rasterized;
+        } else if (event.key.keysym.sym == SDLK_8) {
+            renderMode = RayTraced;
+        }
+    }
+    // handle mouse clicks
+    else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
         window.saveBMP("output.bmp");
-    } else if (event.type == SDL_WINDOWEVENT) {
+    }
+    // close window
+    else if (event.type == SDL_WINDOWEVENT) {
         if (event.window.event == SDL_WINDOWEVENT_CLOSE) {
-            std::cout << "Quiting" << std::endl;
             windowOpen = false;
-        }
-    } else if (event.type == SDL_MOUSEMOTION) {
-        // Get the relative movement of the mouse
-        // std::cout << "mouse moved" << std::endl;
-        if (mouseMovement) {
-            int xOffset = event.motion.xrel;
-            int yOffset = event.motion.yrel;
-
-            // Update camera orientation based on mouse movement
-            // processMouseMovement(xOffset, yOffset);
         }
     }
 }
 
-void draw(DrawingWindow &window, std::vector<ModelTriangle> model) {
-    window.clearPixels();
-
-
-    // initialise depth buffer
-    for (auto &row: zDepth) {
-        for (auto &elem: row) {
-            elem = -100000;
-        }
-    }
-
-    // render box model
-    glm::vec3 modelOrigin = glm::vec3(0, 0, 0);
-    float scale = 500;
-
-    if (lookAt) {
-        camLookAt(modelOrigin);
-    }
+void draw(DrawingWindow &window, std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale) {
+    // render model
 
     if (renderMode == WireFrame) {
         drawWireframeModel(model, modelOrigin, scale, window);
@@ -986,16 +865,28 @@ int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
-
+    // parse obj file to create model
     std::vector<ModelTriangle> boxModel = parseObj("cornell-box.obj", "cornell-box.mtl", 0.35);
 
 
     while (windowOpen) {
-        // We MUST poll for events - otherwise the window will freeze !
+        //poll for events - otherwise the window will freeze
         if (window.pollForInputEvents(event)) handleEvent(event, window);
 
-        draw(window, boxModel);
-        // Need to render the frame at the end, or nothing actually gets shown on the screen !
+        window.clearPixels();
+
+
+        // draw box model
+        glm::vec3 modelOrigin = glm::vec3(0, 0, 0);
+        float modelScale = 500;
+
+        if (lookAt) {
+            camLookAt(modelOrigin);
+        }
+
+        draw(window, boxModel, modelOrigin, modelScale);
+
+        // render the frame so it gets shown on screen
         window.renderFrame();
     }
 

@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise"
+CMAKE_SOURCE_DIR = "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/Renderer"
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug"
+CMAKE_BINARY_DIR = "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/Renderer/cmake-build-debug"
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles/progress.marks"
+	$(CMAKE_COMMAND) -E cmake_progress_start "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/Renderer/cmake-build-debug/CMakeFiles" "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/Renderer/cmake-build-debug/CMakeFiles/progress.marks"
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/RedNoise/cmake-build-debug/CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start "/mnt/c/Users/User/OneDrive - University of Bristol/Computer Graphics/Renderer/cmake-build-debug/CMakeFiles" 0
 .PHONY : all
 
 # The main clean target
@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named RedNoise
+# Target rules for targets named Renderer
 
 # Build rule for target.
-RedNoise: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 RedNoise
-.PHONY : RedNoise
+Renderer: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 Renderer
+.PHONY : Renderer
 
 # fast build rule for target.
-RedNoise/fast:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/build
-.PHONY : RedNoise/fast
+Renderer/fast:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/build
+.PHONY : Renderer/fast
 
 libs/sdw/CanvasPoint.o: libs/sdw/CanvasPoint.cpp.o
 
@@ -129,7 +129,7 @@ libs/sdw/CanvasPoint.o: libs/sdw/CanvasPoint.cpp.o
 
 # target to build an object file
 libs/sdw/CanvasPoint.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/CanvasPoint.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/CanvasPoint.cpp.o
 .PHONY : libs/sdw/CanvasPoint.cpp.o
 
 libs/sdw/CanvasPoint.i: libs/sdw/CanvasPoint.cpp.i
@@ -138,7 +138,7 @@ libs/sdw/CanvasPoint.i: libs/sdw/CanvasPoint.cpp.i
 
 # target to preprocess a source file
 libs/sdw/CanvasPoint.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/CanvasPoint.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/CanvasPoint.cpp.i
 .PHONY : libs/sdw/CanvasPoint.cpp.i
 
 libs/sdw/CanvasPoint.s: libs/sdw/CanvasPoint.cpp.s
@@ -147,7 +147,7 @@ libs/sdw/CanvasPoint.s: libs/sdw/CanvasPoint.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/CanvasPoint.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/CanvasPoint.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/CanvasPoint.cpp.s
 .PHONY : libs/sdw/CanvasPoint.cpp.s
 
 libs/sdw/CanvasTriangle.o: libs/sdw/CanvasTriangle.cpp.o
@@ -156,7 +156,7 @@ libs/sdw/CanvasTriangle.o: libs/sdw/CanvasTriangle.cpp.o
 
 # target to build an object file
 libs/sdw/CanvasTriangle.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/CanvasTriangle.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/CanvasTriangle.cpp.o
 .PHONY : libs/sdw/CanvasTriangle.cpp.o
 
 libs/sdw/CanvasTriangle.i: libs/sdw/CanvasTriangle.cpp.i
@@ -165,7 +165,7 @@ libs/sdw/CanvasTriangle.i: libs/sdw/CanvasTriangle.cpp.i
 
 # target to preprocess a source file
 libs/sdw/CanvasTriangle.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/CanvasTriangle.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/CanvasTriangle.cpp.i
 .PHONY : libs/sdw/CanvasTriangle.cpp.i
 
 libs/sdw/CanvasTriangle.s: libs/sdw/CanvasTriangle.cpp.s
@@ -174,7 +174,7 @@ libs/sdw/CanvasTriangle.s: libs/sdw/CanvasTriangle.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/CanvasTriangle.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/CanvasTriangle.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/CanvasTriangle.cpp.s
 .PHONY : libs/sdw/CanvasTriangle.cpp.s
 
 libs/sdw/Colour.o: libs/sdw/Colour.cpp.o
@@ -183,7 +183,7 @@ libs/sdw/Colour.o: libs/sdw/Colour.cpp.o
 
 # target to build an object file
 libs/sdw/Colour.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Colour.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Colour.cpp.o
 .PHONY : libs/sdw/Colour.cpp.o
 
 libs/sdw/Colour.i: libs/sdw/Colour.cpp.i
@@ -192,7 +192,7 @@ libs/sdw/Colour.i: libs/sdw/Colour.cpp.i
 
 # target to preprocess a source file
 libs/sdw/Colour.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Colour.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Colour.cpp.i
 .PHONY : libs/sdw/Colour.cpp.i
 
 libs/sdw/Colour.s: libs/sdw/Colour.cpp.s
@@ -201,7 +201,7 @@ libs/sdw/Colour.s: libs/sdw/Colour.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/Colour.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Colour.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Colour.cpp.s
 .PHONY : libs/sdw/Colour.cpp.s
 
 libs/sdw/DrawingWindow.o: libs/sdw/DrawingWindow.cpp.o
@@ -210,7 +210,7 @@ libs/sdw/DrawingWindow.o: libs/sdw/DrawingWindow.cpp.o
 
 # target to build an object file
 libs/sdw/DrawingWindow.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/DrawingWindow.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/DrawingWindow.cpp.o
 .PHONY : libs/sdw/DrawingWindow.cpp.o
 
 libs/sdw/DrawingWindow.i: libs/sdw/DrawingWindow.cpp.i
@@ -219,7 +219,7 @@ libs/sdw/DrawingWindow.i: libs/sdw/DrawingWindow.cpp.i
 
 # target to preprocess a source file
 libs/sdw/DrawingWindow.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/DrawingWindow.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/DrawingWindow.cpp.i
 .PHONY : libs/sdw/DrawingWindow.cpp.i
 
 libs/sdw/DrawingWindow.s: libs/sdw/DrawingWindow.cpp.s
@@ -228,7 +228,7 @@ libs/sdw/DrawingWindow.s: libs/sdw/DrawingWindow.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/DrawingWindow.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/DrawingWindow.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/DrawingWindow.cpp.s
 .PHONY : libs/sdw/DrawingWindow.cpp.s
 
 libs/sdw/ModelTriangle.o: libs/sdw/ModelTriangle.cpp.o
@@ -237,7 +237,7 @@ libs/sdw/ModelTriangle.o: libs/sdw/ModelTriangle.cpp.o
 
 # target to build an object file
 libs/sdw/ModelTriangle.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/ModelTriangle.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/ModelTriangle.cpp.o
 .PHONY : libs/sdw/ModelTriangle.cpp.o
 
 libs/sdw/ModelTriangle.i: libs/sdw/ModelTriangle.cpp.i
@@ -246,7 +246,7 @@ libs/sdw/ModelTriangle.i: libs/sdw/ModelTriangle.cpp.i
 
 # target to preprocess a source file
 libs/sdw/ModelTriangle.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/ModelTriangle.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/ModelTriangle.cpp.i
 .PHONY : libs/sdw/ModelTriangle.cpp.i
 
 libs/sdw/ModelTriangle.s: libs/sdw/ModelTriangle.cpp.s
@@ -255,7 +255,7 @@ libs/sdw/ModelTriangle.s: libs/sdw/ModelTriangle.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/ModelTriangle.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/ModelTriangle.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/ModelTriangle.cpp.s
 .PHONY : libs/sdw/ModelTriangle.cpp.s
 
 libs/sdw/RayTriangleIntersection.o: libs/sdw/RayTriangleIntersection.cpp.o
@@ -264,7 +264,7 @@ libs/sdw/RayTriangleIntersection.o: libs/sdw/RayTriangleIntersection.cpp.o
 
 # target to build an object file
 libs/sdw/RayTriangleIntersection.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/RayTriangleIntersection.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/RayTriangleIntersection.cpp.o
 .PHONY : libs/sdw/RayTriangleIntersection.cpp.o
 
 libs/sdw/RayTriangleIntersection.i: libs/sdw/RayTriangleIntersection.cpp.i
@@ -273,7 +273,7 @@ libs/sdw/RayTriangleIntersection.i: libs/sdw/RayTriangleIntersection.cpp.i
 
 # target to preprocess a source file
 libs/sdw/RayTriangleIntersection.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/RayTriangleIntersection.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/RayTriangleIntersection.cpp.i
 .PHONY : libs/sdw/RayTriangleIntersection.cpp.i
 
 libs/sdw/RayTriangleIntersection.s: libs/sdw/RayTriangleIntersection.cpp.s
@@ -282,7 +282,7 @@ libs/sdw/RayTriangleIntersection.s: libs/sdw/RayTriangleIntersection.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/RayTriangleIntersection.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/RayTriangleIntersection.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/RayTriangleIntersection.cpp.s
 .PHONY : libs/sdw/RayTriangleIntersection.cpp.s
 
 libs/sdw/TextureMap.o: libs/sdw/TextureMap.cpp.o
@@ -291,7 +291,7 @@ libs/sdw/TextureMap.o: libs/sdw/TextureMap.cpp.o
 
 # target to build an object file
 libs/sdw/TextureMap.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/TextureMap.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/TextureMap.cpp.o
 .PHONY : libs/sdw/TextureMap.cpp.o
 
 libs/sdw/TextureMap.i: libs/sdw/TextureMap.cpp.i
@@ -300,7 +300,7 @@ libs/sdw/TextureMap.i: libs/sdw/TextureMap.cpp.i
 
 # target to preprocess a source file
 libs/sdw/TextureMap.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/TextureMap.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/TextureMap.cpp.i
 .PHONY : libs/sdw/TextureMap.cpp.i
 
 libs/sdw/TextureMap.s: libs/sdw/TextureMap.cpp.s
@@ -309,7 +309,7 @@ libs/sdw/TextureMap.s: libs/sdw/TextureMap.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/TextureMap.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/TextureMap.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/TextureMap.cpp.s
 .PHONY : libs/sdw/TextureMap.cpp.s
 
 libs/sdw/TexturePoint.o: libs/sdw/TexturePoint.cpp.o
@@ -318,7 +318,7 @@ libs/sdw/TexturePoint.o: libs/sdw/TexturePoint.cpp.o
 
 # target to build an object file
 libs/sdw/TexturePoint.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/TexturePoint.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/TexturePoint.cpp.o
 .PHONY : libs/sdw/TexturePoint.cpp.o
 
 libs/sdw/TexturePoint.i: libs/sdw/TexturePoint.cpp.i
@@ -327,7 +327,7 @@ libs/sdw/TexturePoint.i: libs/sdw/TexturePoint.cpp.i
 
 # target to preprocess a source file
 libs/sdw/TexturePoint.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/TexturePoint.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/TexturePoint.cpp.i
 .PHONY : libs/sdw/TexturePoint.cpp.i
 
 libs/sdw/TexturePoint.s: libs/sdw/TexturePoint.cpp.s
@@ -336,7 +336,7 @@ libs/sdw/TexturePoint.s: libs/sdw/TexturePoint.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/TexturePoint.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/TexturePoint.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/TexturePoint.cpp.s
 .PHONY : libs/sdw/TexturePoint.cpp.s
 
 libs/sdw/Utils.o: libs/sdw/Utils.cpp.o
@@ -345,7 +345,7 @@ libs/sdw/Utils.o: libs/sdw/Utils.cpp.o
 
 # target to build an object file
 libs/sdw/Utils.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Utils.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Utils.cpp.o
 .PHONY : libs/sdw/Utils.cpp.o
 
 libs/sdw/Utils.i: libs/sdw/Utils.cpp.i
@@ -354,7 +354,7 @@ libs/sdw/Utils.i: libs/sdw/Utils.cpp.i
 
 # target to preprocess a source file
 libs/sdw/Utils.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Utils.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Utils.cpp.i
 .PHONY : libs/sdw/Utils.cpp.i
 
 libs/sdw/Utils.s: libs/sdw/Utils.cpp.s
@@ -363,7 +363,7 @@ libs/sdw/Utils.s: libs/sdw/Utils.cpp.s
 
 # target to generate assembly for a file
 libs/sdw/Utils.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/libs/sdw/Utils.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Utils.cpp.s
 .PHONY : libs/sdw/Utils.cpp.s
 
 src/Helpers.o: src/Helpers.cpp.o
@@ -372,7 +372,7 @@ src/Helpers.o: src/Helpers.cpp.o
 
 # target to build an object file
 src/Helpers.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/Helpers.cpp.o
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Helpers.cpp.o
 .PHONY : src/Helpers.cpp.o
 
 src/Helpers.i: src/Helpers.cpp.i
@@ -381,7 +381,7 @@ src/Helpers.i: src/Helpers.cpp.i
 
 # target to preprocess a source file
 src/Helpers.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/Helpers.cpp.i
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Helpers.cpp.i
 .PHONY : src/Helpers.cpp.i
 
 src/Helpers.s: src/Helpers.cpp.s
@@ -390,35 +390,62 @@ src/Helpers.s: src/Helpers.cpp.s
 
 # target to generate assembly for a file
 src/Helpers.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/Helpers.cpp.s
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Helpers.cpp.s
 .PHONY : src/Helpers.cpp.s
 
-src/RedNoise.o: src/RedNoise.cpp.o
+src/ModelLoader.o: src/ModelLoader.cpp.o
 
-.PHONY : src/RedNoise.o
+.PHONY : src/ModelLoader.o
 
 # target to build an object file
-src/RedNoise.cpp.o:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/RedNoise.cpp.o
-.PHONY : src/RedNoise.cpp.o
+src/ModelLoader.cpp.o:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/ModelLoader.cpp.o
+.PHONY : src/ModelLoader.cpp.o
 
-src/RedNoise.i: src/RedNoise.cpp.i
+src/ModelLoader.i: src/ModelLoader.cpp.i
 
-.PHONY : src/RedNoise.i
+.PHONY : src/ModelLoader.i
 
 # target to preprocess a source file
-src/RedNoise.cpp.i:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/RedNoise.cpp.i
-.PHONY : src/RedNoise.cpp.i
+src/ModelLoader.cpp.i:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/ModelLoader.cpp.i
+.PHONY : src/ModelLoader.cpp.i
 
-src/RedNoise.s: src/RedNoise.cpp.s
+src/ModelLoader.s: src/ModelLoader.cpp.s
 
-.PHONY : src/RedNoise.s
+.PHONY : src/ModelLoader.s
 
 # target to generate assembly for a file
-src/RedNoise.cpp.s:
-	$(MAKE) -f CMakeFiles/RedNoise.dir/build.make CMakeFiles/RedNoise.dir/src/RedNoise.cpp.s
-.PHONY : src/RedNoise.cpp.s
+src/ModelLoader.cpp.s:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/ModelLoader.cpp.s
+.PHONY : src/ModelLoader.cpp.s
+
+src/Renderer.o: src/Renderer.cpp.o
+
+.PHONY : src/Renderer.o
+
+# target to build an object file
+src/Renderer.cpp.o:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Renderer.cpp.o
+.PHONY : src/Renderer.cpp.o
+
+src/Renderer.i: src/Renderer.cpp.i
+
+.PHONY : src/Renderer.i
+
+# target to preprocess a source file
+src/Renderer.cpp.i:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Renderer.cpp.i
+.PHONY : src/Renderer.cpp.i
+
+src/Renderer.s: src/Renderer.cpp.s
+
+.PHONY : src/Renderer.s
+
+# target to generate assembly for a file
+src/Renderer.cpp.s:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Renderer.cpp.s
+.PHONY : src/Renderer.cpp.s
 
 # Help Target
 help:
@@ -428,7 +455,7 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... RedNoise"
+	@echo "... Renderer"
 	@echo "... libs/sdw/CanvasPoint.o"
 	@echo "... libs/sdw/CanvasPoint.i"
 	@echo "... libs/sdw/CanvasPoint.s"
@@ -459,9 +486,12 @@ help:
 	@echo "... src/Helpers.o"
 	@echo "... src/Helpers.i"
 	@echo "... src/Helpers.s"
-	@echo "... src/RedNoise.o"
-	@echo "... src/RedNoise.i"
-	@echo "... src/RedNoise.s"
+	@echo "... src/ModelLoader.o"
+	@echo "... src/ModelLoader.i"
+	@echo "... src/ModelLoader.s"
+	@echo "... src/Renderer.o"
+	@echo "... src/Renderer.i"
+	@echo "... src/Renderer.s"
 .PHONY : help
 
 

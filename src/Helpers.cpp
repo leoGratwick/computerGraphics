@@ -6,18 +6,15 @@
 #include <DrawingWindow.h>
 #include <CanvasPoint.h>
 #include <Utils.h>
-#include <iostream>
 #include <TextureMap.h>
 #include <vector>
 #include <bits/stdc++.h>
 #include <glm/detail/type_vec.hpp>
 #include <glm/detail/type_vec3.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include "ModelTriangle.h"
-#include <filesystem>
 #include <cerrno>
 
-std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues) {
+std::vector<float> lerpSingleFloats(float from, float to, int numberOfValues) {
     float gap = (to - from) / (numberOfValues - 1);
     std::vector<float> vec = {};
     for (int i = 0; i < numberOfValues; i++) {
@@ -27,11 +24,11 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numberOfVal
     return vec;
 }
 
-std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues) {
+std::vector<glm::vec3> lerpThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues) {
     std::vector<glm::vec3> lerpd = {};
-    std::vector<float> col1 = interpolateSingleFloats(from[0], to[0], numberOfValues);
-    std::vector<float> col2 = interpolateSingleFloats(from[1], to[1], numberOfValues);
-    std::vector<float> col3 = interpolateSingleFloats(from[2], to[2], numberOfValues);
+    std::vector<float> col1 = lerpSingleFloats(from[0], to[0], numberOfValues);
+    std::vector<float> col2 = lerpSingleFloats(from[1], to[1], numberOfValues);
+    std::vector<float> col3 = lerpSingleFloats(from[2], to[2], numberOfValues);
 
     for (int i = 0; i < numberOfValues; i++) {
         glm::vec3 add(col1.at(i), col2.at(i), col3.at(i));
@@ -43,8 +40,8 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 
 std::vector<CanvasPoint> lerpCanvasPoints(CanvasPoint from, CanvasPoint to, int numberOfValues) {
     std::vector<CanvasPoint> lerpd = {};
-    std::vector<float> col1 = interpolateSingleFloats(from.x, to.x, numberOfValues);
-    std::vector<float> col2 = interpolateSingleFloats(from.y, to.y, numberOfValues);
+    std::vector<float> col1 = lerpSingleFloats(from.x, to.x, numberOfValues);
+    std::vector<float> col2 = lerpSingleFloats(from.y, to.y, numberOfValues);
 
     for (int i = 0; i < numberOfValues; i++) {
         CanvasPoint add(col1.at(i), col2.at(i));
@@ -53,11 +50,8 @@ std::vector<CanvasPoint> lerpCanvasPoints(CanvasPoint from, CanvasPoint to, int 
     return lerpd;
 }
 
-uint32_t vec3toColour(glm::vec3 vec) {
-    float red = vec[0];
-    float green = vec[1];
-    float blue = vec[2];
-    uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
+uint32_t colourToInt(Colour col) {
+    uint32_t colour = (255 << 24) + (col.red << 16) + (col.green << 8) + col.blue;
 
     return colour;
 }
@@ -67,11 +61,8 @@ float splitPercent(CanvasPoint lineStart, CanvasPoint lineEnd, CanvasPoint point
     return splitP;
 }
 
-bool pointInWindow(CanvasPoint point, DrawingWindow &window) {
-    if (point.x > window.width || point.y > window.height) {
-        return false;
-    }
-    return true;
+bool pointInCanvas(CanvasPoint point, DrawingWindow &window) {
+    return ((point.x < window.width - 1) && (point.y < window.height - 1) && (point.y >= 0) && (point.x >= 0));
 }
 
 CanvasPoint getPointAlongLine(CanvasPoint lineStart, CanvasPoint lineEnd, float ratio) {
@@ -103,6 +94,23 @@ uint32_t getColourFromTexture(CanvasPoint point, TextureMap &textureMap) {
     return textureMap.pixels[ind];
 }
 
+glm::mat3 rotateOrientation(std::string axis, float angle, glm::mat3 currentOr) {
+    glm::mat3 rotationMatrix = glm::mat3();
+    if (axis == "x") {
+        rotationMatrix = glm::mat3(1, 0, 0, 0, std::cos(angle), std::sin(angle), 0, -std::sin(angle), std::cos(angle));
+    } else if (axis == "y") {
+        rotationMatrix = glm::mat3(std::cos(angle), 0, -std::sin(angle), 0, 1, 0, std::sin(angle), 0, std::cos(angle));
+    } else if (axis == "z") {
+        rotationMatrix = glm::mat3(std::cos(angle), std::sin(angle), 0, -std::sin(angle), std::cos(angle), 0, 0, 0, 1);
+    }
+    glm::mat3 newOr = rotationMatrix * currentOr;
+    return newOr;
+}
+
+glm::vec3 triangleNormal(glm::vec3 vert1, glm::vec3 vert2, glm::vec3 vert3) {
+    return normalize(glm::cross(vert2 - vert1, vert3 - vert1));
+}
+
 void redNoise(DrawingWindow &window) {
     for (size_t y = 0; y < window.height; y++) {
         for (size_t x = 0; x < window.width; x++) {
@@ -117,7 +125,7 @@ void redNoise(DrawingWindow &window) {
 
 void grayScale1D(DrawingWindow &window) {
     // get horizonal line of values
-    std::vector<float> lineCols = interpolateSingleFloats(255, 0, window.width);
+    std::vector<float> lineCols = lerpSingleFloats(255, 0, window.width);
 
     for (size_t y = 0; y < window.height; y++) {
         for (size_t x = 0; x < window.width; x++) {
@@ -135,49 +143,22 @@ void rainbow(DrawingWindow &window) {
     glm::vec3 bottomLeft(255, 255, 0); // yellow
 
     // left
-    std::vector<glm::vec3> left = interpolateThreeElementValues(topLeft, bottomLeft, window.height);
+    std::vector<glm::vec3> left = lerpThreeElementValues(topLeft, bottomLeft, window.height);
 
     // right
-    std::vector<glm::vec3> right = interpolateThreeElementValues(topRight, bottomRight, window.height);
+    std::vector<glm::vec3> right = lerpThreeElementValues(topRight, bottomRight, window.height);
 
 
     // fill
     for (size_t y = 0; y < window.height; y++) {
-        std::vector<glm::vec3> lineCols = interpolateThreeElementValues(left.at(y), right.at(y), window.width);
+        std::vector<glm::vec3> lineCols = lerpThreeElementValues(left.at(y), right.at(y), window.width);
         for (size_t x = 0; x < window.width; x++) {
-            int col = vec3toColour(lineCols.at(x));
-            window.setPixelColour(x, y, col);
+            glm::vec3 col = lineCols.at(x);
+            int colour = colourToInt(Colour(col.r, col.g, col.b));
+            window.setPixelColour(x, y, colour);
         }
     }
 }
 
-glm::mat3 rotateOrientation(std::string axis, float angle, glm::mat3 currentOr) {
-    glm::mat3 rotationMatrix = glm::mat3();
-    if (axis == "x") {
-        rotationMatrix = glm::mat3(1, 0, 0, 0, std::cos(angle), std::sin(angle), 0, -std::sin(angle), std::cos(angle));
-    } else if (axis == "y") {
-        rotationMatrix = glm::mat3(std::cos(angle), 0, -std::sin(angle), 0, 1, 0, std::sin(angle), 0, std::cos(angle));
-    } else if (axis == "z") {
-        rotationMatrix = glm::mat3(std::cos(angle), std::sin(angle), 0, -std::sin(angle), std::cos(angle), 0, 0, 0, 1);
-    }
-    glm::mat3 newOr = rotationMatrix * currentOr;
-    return newOr;
-}
-
-glm::mat3 orthonormalize(const glm::mat3 &mat) {
-    glm::vec3 right = glm::normalize(mat[0]);
-    glm::vec3 up = glm::normalize(mat[1]);
-    glm::vec3 forward = glm::normalize(mat[2]);
-
-    // Recalculate up to ensure orthogonality
-    up = glm::normalize(up - glm::dot(up, forward) * forward);
-    forward = glm::normalize(forward - glm::dot(forward, right) * right);
-
-    return glm::mat3(right, up, forward);
-}
-
-glm::vec3 triangleNormal(glm::vec3 vert1, glm::vec3 vert2, glm::vec3 vert3) {
-    return normalize(glm::cross(vert2 - vert1, vert3 - vert1));
-}
 
 

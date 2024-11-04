@@ -5,14 +5,14 @@
 # Where `Release` can be replaced with `Debug`, which contains gdb and address sanitiser definitions already written for you.
 # Once a build is created, proceed with *compilation*:
 # 
-#   cmake --build build --target RedNoise --config Release # optionally, for parallel build, append -j $(nproc)
+#   cmake --build build --target Renderer --config Release # optionally, for parallel build, append -j $(nproc)
 #
 # This creates the executable in the build directory. You only need to *generate* a build if you modify the CMakeList.txt file.
 # For any other changes to the source code, simply recompile.
 
 
 cmake_minimum_required(VERSION 3.12)
-project(RedNoise)
+project(Renderer)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -25,7 +25,7 @@ find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS})
 include_directories(libs/sdw)
 
-add_executable(RedNoise
+add_executable(Renderer
         libs/sdw/CanvasPoint.cpp
         libs/sdw/CanvasTriangle.cpp
         libs/sdw/Colour.cpp
@@ -35,13 +35,15 @@ add_executable(RedNoise
         libs/sdw/TextureMap.cpp
         libs/sdw/TexturePoint.cpp
         libs/sdw/Utils.cpp
-        src/RedNoise.cpp
-        src/RedNoise.cpp
+        src/Renderer.cpp
+        src/Renderer.cpp
         src/Helpers.cpp
-        src/Helpers.h)
+        src/Helpers.h
+        src/ModelLoader.cpp
+        src/ModelLoader.h)
 
 if (MSVC)
-    target_compile_options(RedNoise
+    target_compile_options(Renderer
             PUBLIC
             /W3
             /Zc:wchar_t
@@ -52,7 +54,7 @@ if (MSVC)
         set(SDL2_LIBRARIES SDL2::SDL2 SDL2::SDL2main)
     endif()
 else ()
-    target_compile_options(RedNoise
+    target_compile_options(Renderer
         PUBLIC
         -Wall
         -Wextra
@@ -65,13 +67,13 @@ else ()
 
     set(DEBUG_OPTIONS -O2 -fno-omit-frame-pointer -g)
     set(RELEASE_OPTIONS -O3 -march=native -mtune=native)
-    target_link_libraries(RedNoise PUBLIC $<$<CONFIG:Debug>:-W>)
+    target_link_libraries(Renderer PUBLIC $<$<CONFIG:Debug>:-W>)
 
 endif()
 
 
-target_compile_options(RedNoise PUBLIC "$<$<CONFIG:RelWithDebInfo>:${RELEASE_OPTIONS}>")
-target_compile_options(RedNoise PUBLIC "$<$<CONFIG:Release>:${RELEASE_OPTIONS}>")
-target_compile_options(RedNoise PUBLIC "$<$<CONFIG:Debug>:${DEBUG_OPTIONS}>")
+target_compile_options(Renderer PUBLIC "$<$<CONFIG:RelWithDebInfo>:${RELEASE_OPTIONS}>")
+target_compile_options(Renderer PUBLIC "$<$<CONFIG:Release>:${RELEASE_OPTIONS}>")
+target_compile_options(Renderer PUBLIC "$<$<CONFIG:Debug>:${DEBUG_OPTIONS}>")
  
-target_link_libraries(RedNoise PRIVATE ${SDL2_LIBRARIES})
+target_link_libraries(Renderer PRIVATE ${SDL2_LIBRARIES})
