@@ -40,7 +40,11 @@ add_executable(Renderer
         src/Helpers.cpp
         src/Helpers.h
         src/ModelLoader.cpp
-        src/ModelLoader.h)
+        src/ModelLoader.h
+        src/Camera.cpp
+        src/Camera.h
+        src/LightSource.cpp
+        src/LightSource.h)
 
 if (MSVC)
     target_compile_options(Renderer

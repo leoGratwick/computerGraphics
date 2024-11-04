@@ -17,6 +17,8 @@
 #include "Helpers.h"
 #include "RayTriangleIntersection.h"
 #include "ModelLoader.h"
+#include "Camera.h"
+#include "LightSource.h"
 
 #define WIDTH 900
 #define HEIGHT 900
@@ -28,24 +30,21 @@ bool windowOpen = true;
 
 
 // camera
-glm::vec3 camera(0, 0, 4);
-glm::vec3 camDir(1, 1, 1);
-glm::mat3 camOr(1, 0, 0, 0, 1, 0, 0, 0, 1);
-float cameraSpeed = 0.1;
-float focalLength = 2.0;
+Camera camera = Camera();
 bool lookAt = false;
+
 // for rotation
 float theta = 0;
 
 
 // lighting
 // glm::vec3 lightSource(0, 0.7, 1);
-glm::vec3 lightSource(0, 0.9, 0);
+LightSource lightSource = LightSource();
+
 float ambientLightThresh = 0.2;
 float shadowDarkness = 0.3;
-bool moveLight = true;
 float specularExponent = 8;
-
+bool moveLight = true;
 
 // depth buffer
 std::vector<std::vector<float> > zDepth(WIDTH, std::vector<float>(HEIGHT, -10000));
@@ -471,7 +470,7 @@ glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 
 CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 point, float focalLength, float scale, DrawingWindow &window) {
     // in camera coord system
     CanvasPoint out;
-    glm::vec3 adjCoord = point * camOr;
+    glm::vec3 adjCoord = point * camera.orientation;
 
     point = adjCoord;
     float heightShift = window.height / 2;
@@ -494,7 +493,7 @@ CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 point, float focalLength, flo
 }
 
 void camLookAt(glm::vec3 point) {
-    glm::vec3 camDir = glm::normalize(point - camera);
+    glm::vec3 camDir = glm::normalize(point - camera.position);
     glm::vec3 up(0, 1, 0);
     glm::vec3 left = -glm::normalize(glm::cross(up, camDir));
     glm::vec3 newUp = glm::normalize(glm::cross(camDir, -left));
@@ -506,7 +505,7 @@ void camLookAt(glm::vec3 point) {
     );
 
 
-    camOr = newCamOr;
+    camera.orientation = newCamOr;
 }
 
 RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std::vector<ModelTriangle> modelTriangles,
@@ -591,18 +590,24 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
 }
 
 void drawWireframeModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale, DrawingWindow &window) {
+    // initialise depth buffer
+    for (auto &row: zDepth) {
+        for (auto &elem: row) {
+            elem = -std::numeric_limits<float>::infinity();
+        }
+    }
     for (int i = 0; i < model.size(); i++) {
         ModelTriangle tri = model.at(i);
         Colour colour = tri.colour;
         // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
-        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera, tri.vertices[0]);
-        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera, tri.vertices[1]);
-        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera, tri.vertices[2]);
+        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[0]);
+        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[1]);
+        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[2]);
 
 
-        CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, focalLength, scale, window);
-        CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, focalLength, scale, window);
-        CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, focalLength, scale, window);
+        CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, camera.focalLength, scale, window);
+        CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, camera.focalLength, scale, window);
+        CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, camera.focalLength, scale, window);
 
         // if (pointInCanvas(canp1, window) and pointInCanvas(canp2, window) and pointInCanvas(canp3, window)) {
         drawTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
@@ -620,14 +625,14 @@ void drawRasterizedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin
         ModelTriangle tri = model.at(i);
         Colour colour = tri.colour;
         // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
-        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera, tri.vertices[0]);
-        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera, tri.vertices[1]);
-        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera, tri.vertices[2]);
+        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[0]);
+        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[1]);
+        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[2]);
 
 
-        CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, focalLength, scale, window);
-        CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, focalLength, scale, window);
-        CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, focalLength, scale, window);
+        CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, camera.focalLength, scale, window);
+        CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, camera.focalLength, scale, window);
+        CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, camera.focalLength, scale, window);
 
         // if (pointInCanvas(canp1, window) and pointInCanvas(canp2, window) and pointInCanvas(canp3, window)) {
         fillTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
@@ -642,9 +647,9 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
         ModelTriangle tri = model.at(i);
         // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
 
-        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera, tri.vertices[0]);
-        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera, tri.vertices[1]);;
-        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera, tri.vertices[2]);
+        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[0]);
+        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[1]);;
+        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[2]);
 
         model[i].vertices[0] = vert1;
         model[i].vertices[1] = vert2;
@@ -653,7 +658,7 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
         triangleNormals.push_back(triangleNormal(vert1, vert2, vert3));
     }
 
-    float z = -focalLength;
+    float z = -camera.focalLength;
     CanvasPoint canvasCentre((window.width / 2), (window.height / 2));
 
     for (int i = 0; i < window.width; i++) {
@@ -668,17 +673,17 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
 
             // apply camera orientation
             // direction of ray from camera to pixel
-            glm::vec3 rayDir = normalize(camOr * canvasPointLocation3D - camera);
+            glm::vec3 rayDir = normalize(camera.orientation * canvasPointLocation3D - camera.position);
 
 
             //find the closest intersection with a model triangle
-            RayTriangleIntersection intersection = getClosestValidIntersection(rayDir, model, camera);
+            RayTriangleIntersection intersection = getClosestValidIntersection(rayDir, model, camera.position);
 
 
             // if not invalid intersection
             if (intersection.distanceFromCamera > 0) {
                 // change light source position from world coordinates to camera coordinates
-                glm::vec3 light = changeCoordSystem(glm::vec3(0, 0, 0), camera, lightSource);
+                glm::vec3 light = changeCoordSystem(glm::vec3(0, 0, 0), camera.position, lightSource.position);
                 // light = lightSource;
 
                 float epsilon = 0.001;
@@ -749,61 +754,56 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
         // camera and light source movement
         if (event.key.keysym.sym == SDLK_a) {
             // left
-            glm::vec3 right = glm::vec3(camOr[0][0], camOr[1][0], camOr[2][0]);
+            glm::vec3 right = glm::vec3(camera.orientation[0][0], camera.orientation[1][0], camera.orientation[2][0]);
             if (moveLight) {
-                lightSource -= cameraSpeed * right;
+                lightSource.moveLeft();
             } else {
-                camera -= cameraSpeed * right;
+                camera.moveLeft();
             }
         } else if (event.key.keysym.sym == SDLK_d) {
             // right
-            glm::vec3 right = glm::vec3(camOr[0][0], camOr[1][0], camOr[2][0]);
             if (moveLight) {
-                lightSource += cameraSpeed * right;
+                lightSource.moveRight();
             } else {
-                camera += cameraSpeed * right;
+                camera.moveRight();
             }
         } else if (event.key.keysym.sym == SDLK_SPACE) {
             // up
-            glm::vec3 up = glm::vec3(camOr[0][1], camOr[1][1], camOr[2][1]);
             if (moveLight) {
-                lightSource += cameraSpeed * up;
+                lightSource.moveUp();
             } else {
-                camera += cameraSpeed * up;
+                camera.moveUp();
             }
         } else if (event.key.keysym.sym == SDLK_LSHIFT) {
             // down
-            glm::vec3 up = glm::vec3(camOr[0][1], camOr[1][1], camOr[2][1]);
             if (moveLight) {
-                lightSource -= cameraSpeed * up;
+                lightSource.moveDown();
             } else {
-                camera -= cameraSpeed * up;
+                camera.moveDown();
             }
         } else if (event.key.keysym.sym == SDLK_w) {
             // forward
-            glm::vec3 forward = glm::vec3(camOr[0][2], camOr[1][2], camOr[2][2]);
             if (moveLight) {
-                lightSource -= cameraSpeed * forward;
+                lightSource.moveForward();
             } else {
-                camera -= cameraSpeed * forward;
+                camera.moveForward();
             }
         } else if (event.key.keysym.sym == SDLK_s) {
             // backward
-            glm::vec3 forward = glm::vec3(camOr[0][2], camOr[1][2], camOr[2][2]);
             if (moveLight) {
-                lightSource += cameraSpeed * forward;
+                lightSource.moveBackward();
             } else {
-                camera += cameraSpeed * forward;
+                camera.moveBackward();
             }
         } else if (event.key.keysym.sym == SDLK_l) {
             // rotate on x axis
-            camOr = rotateOrientation("x", 0.1, camOr);
+            camera.rotateX(0.1f);
         } else if (event.key.keysym.sym == SDLK_k) {
             // rotate on y axis
-            camOr = rotateOrientation("y", 0.1, camOr);;
+            camera.rotateY(0.1f);
         } else if (event.key.keysym.sym == SDLK_o) {
             // rotate on z axis
-            camOr = rotateOrientation("z", 0.1, camOr);
+            camera.rotateZ(0.1f);
         } else if (event.key.keysym.sym == SDLK_h) {
             // spin around model
             if (theta + 0.05 > M_PI * 2) {
@@ -813,8 +813,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             float r = 4.0;
             glm::vec3 centre(0, 0, 0);
 
-            camera.x = centre.x + std::cos(theta) * r;
-            camera.z = centre.z + std::sin(theta) * r;
+            camera.position.x = centre.x + std::cos(theta) * r;
+            camera.position.z = centre.z + std::sin(theta) * r;
         } else if (event.key.keysym.sym == SDLK_v) {
             // toggle lookAt
             lookAt = !lookAt;
@@ -823,7 +823,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             moveLight = !moveLight;
         } else if (event.key.keysym.sym == SDLK_p) {
             // print light source position
-            std::cout << to_string(lightSource) << std::endl;
+            std::cout << to_string(lightSource.position) << std::endl;
         }
 
         // Change Render Type
@@ -867,6 +867,7 @@ int main(int argc, char *argv[]) {
 
     // parse obj file to create model
     std::vector<ModelTriangle> boxModel = parseObj("cornell-box.obj", "cornell-box.mtl", 0.35);
+    lightSource.position = glm::vec3(0, 0.9f, 0);
 
 
     while (windowOpen) {

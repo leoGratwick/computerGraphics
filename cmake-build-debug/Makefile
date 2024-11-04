@@ -366,6 +366,33 @@ libs/sdw/Utils.cpp.s:
 	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/libs/sdw/Utils.cpp.s
 .PHONY : libs/sdw/Utils.cpp.s
 
+src/Camera.o: src/Camera.cpp.o
+
+.PHONY : src/Camera.o
+
+# target to build an object file
+src/Camera.cpp.o:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Camera.cpp.o
+.PHONY : src/Camera.cpp.o
+
+src/Camera.i: src/Camera.cpp.i
+
+.PHONY : src/Camera.i
+
+# target to preprocess a source file
+src/Camera.cpp.i:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Camera.cpp.i
+.PHONY : src/Camera.cpp.i
+
+src/Camera.s: src/Camera.cpp.s
+
+.PHONY : src/Camera.s
+
+# target to generate assembly for a file
+src/Camera.cpp.s:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Camera.cpp.s
+.PHONY : src/Camera.cpp.s
+
 src/Helpers.o: src/Helpers.cpp.o
 
 .PHONY : src/Helpers.o
@@ -392,6 +419,33 @@ src/Helpers.s: src/Helpers.cpp.s
 src/Helpers.cpp.s:
 	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Helpers.cpp.s
 .PHONY : src/Helpers.cpp.s
+
+src/LightSource.o: src/LightSource.cpp.o
+
+.PHONY : src/LightSource.o
+
+# target to build an object file
+src/LightSource.cpp.o:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/LightSource.cpp.o
+.PHONY : src/LightSource.cpp.o
+
+src/LightSource.i: src/LightSource.cpp.i
+
+.PHONY : src/LightSource.i
+
+# target to preprocess a source file
+src/LightSource.cpp.i:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/LightSource.cpp.i
+.PHONY : src/LightSource.cpp.i
+
+src/LightSource.s: src/LightSource.cpp.s
+
+.PHONY : src/LightSource.s
+
+# target to generate assembly for a file
+src/LightSource.cpp.s:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/LightSource.cpp.s
+.PHONY : src/LightSource.cpp.s
 
 src/ModelLoader.o: src/ModelLoader.cpp.o
 
@@ -483,9 +537,15 @@ help:
 	@echo "... libs/sdw/Utils.o"
 	@echo "... libs/sdw/Utils.i"
 	@echo "... libs/sdw/Utils.s"
+	@echo "... src/Camera.o"
+	@echo "... src/Camera.i"
+	@echo "... src/Camera.s"
 	@echo "... src/Helpers.o"
 	@echo "... src/Helpers.i"
 	@echo "... src/Helpers.s"
+	@echo "... src/LightSource.o"
+	@echo "... src/LightSource.i"
+	@echo "... src/LightSource.s"
 	@echo "... src/ModelLoader.o"
 	@echo "... src/ModelLoader.i"
 	@echo "... src/ModelLoader.s"
