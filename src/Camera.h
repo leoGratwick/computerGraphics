@@ -4,6 +4,8 @@
 
 #ifndef CAMERA_H
 #define CAMERA_H
+
+#include "Helpers.h"
 #include <glm/detail/type_vec.hpp>
 #include <glm/detail/type_vec3.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -37,6 +39,8 @@ struct Camera {
     void rotateY(float angle);
 
     void rotateZ(float angle);
+
+    void lookAt(glm::vec3 point);
 };
 
 

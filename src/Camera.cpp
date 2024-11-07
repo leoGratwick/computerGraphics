@@ -3,8 +3,10 @@
 //
 
 #include "Camera.h"
-#include <iostream>
 #include "Helpers.h"
+#include <glm/detail/type_vec.hpp>
+#include <glm/detail/type_vec3.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 // Default constructor
 Camera::Camera()
@@ -22,43 +24,60 @@ void Camera::printStatus() const {
 }
 
 void Camera::moveForward() {
-    glm::vec3 forward = glm::vec3(orientation[0][2], orientation[1][2], orientation[2][2]);
+    glm::vec3 forward = orientation[2];
     position -= speed * forward;
 }
 
 void Camera::moveBackward() {
-    glm::vec3 forward = glm::vec3(orientation[0][2], orientation[1][2], orientation[2][2]);
+    glm::vec3 forward = orientation[2];
     position += speed * forward;
 }
 
 void Camera::moveLeft() {
-    glm::vec3 right = glm::vec3(orientation[0][0], orientation[1][0], orientation[2][0]);
-    position -= speed * right;
+    glm::vec3 left = orientation[0];
+    position -= speed * left;
 }
 
 void Camera::moveRight() {
-    glm::vec3 right = glm::vec3(orientation[0][0], orientation[1][0], orientation[2][0]);
-    position += speed * right;
+    glm::vec3 left = orientation[0];
+    position += speed * left;
 }
 
 void Camera::moveUp() {
-    glm::vec3 up = glm::vec3(orientation[0][1], orientation[1][1], orientation[2][1]);
+    glm::vec3 up = orientation[1];
     position += speed * up;
 }
 
 void Camera::moveDown() {
-    glm::vec3 up = glm::vec3(orientation[0][1], orientation[1][1], orientation[2][1]);
+    glm::vec3 up = orientation[1];
     position -= speed * up;
 }
 
 void Camera::rotateX(float angle) {
-    orientation = ("x", angle, orientation);
+    orientation = rotateOrientation("x", angle, orientation);
 }
 
 void Camera::rotateY(float angle) {
-    orientation = ("y", angle, orientation);
+    orientation = rotateOrientation("y", angle, orientation);
 }
 
 void Camera::rotateZ(float angle) {
-    orientation = ("z", angle, orientation);
+    orientation = rotateOrientation("z", angle, orientation);
+}
+
+void Camera::lookAt(glm::vec3 point) {
+    // calculate new camera direction unit vectors
+    glm::vec3 camDir = normalize(point - position);
+    glm::vec3 up(0, 1, 0);
+    glm::vec3 left = -normalize(glm::cross(up, camDir));
+    glm::vec3 newUp = normalize(glm::cross(camDir, -left));
+
+    // apply camera direction unit vectors to camera orientation
+    glm::mat3 newCamOr = glm::mat3(
+        left, // First column: right vector
+        newUp, // Second column: up vector
+        -camDir // Third column: negative direction vector (looking direction)
+    );
+
+    orientation = newCamOr;
 }

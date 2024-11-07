@@ -111,6 +111,17 @@ glm::vec3 triangleNormal(glm::vec3 vert1, glm::vec3 vert2, glm::vec3 vert3) {
     return normalize(glm::cross(vert2 - vert1, vert3 - vert1));
 }
 
+glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 point) {
+    glm::vec3 transformationVector = fromOrigin - toOrigin;
+    glm::vec3 outPoint = point + transformationVector;
+    return outPoint;
+}
+
+glm::vec3 getVertexInTriangleNormal(glm::vec3 vert1Normal, glm::vec3 vert2Normal, glm::vec3 vert3Normal,
+                                    glm::vec3 edge3) {
+    return glm::vec3(0, 0, 0);
+}
+
 void redNoise(DrawingWindow &window) {
     for (size_t y = 0; y < window.height; y++) {
         for (size_t x = 0; x < window.width; x++) {

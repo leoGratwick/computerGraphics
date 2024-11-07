@@ -12,6 +12,7 @@
 
 struct LightSource {
     glm::vec3 position;
+    float intensity;
     float speed;
 
     LightSource();

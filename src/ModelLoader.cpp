@@ -1,8 +1,10 @@
 #include <Colour.h>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include "ModelTriangle.h"
 #include "Helpers.h"
+#include <tuple>
 
 
 std::map<std::string, Colour> createPalette(const std::string &filename) {
@@ -36,18 +38,51 @@ std::map<std::string, Colour> createPalette(const std::string &filename) {
     return palette;
 }
 
-std::vector<ModelTriangle> parseObj(const std::string &objFilename, const std::string &mtlFilename, float scale) {
+std::map<int, glm::vec3> getVertexNormals(
+    std::map<int, std::vector<glm::vec3> > verticesMap) {
+    std::map<int, glm::vec3> vertexNormals;
+
+    // loop through each vertex
+    for (const auto &[vertexIndex, triangleNormals]: verticesMap) {
+        glm::vec3 triangleNormalSum = glm::vec3(0.0, 0.0, 0.0);
+
+        // calculate the sum of triangle normals
+        for (const auto &triangleNormal: triangleNormals) {
+            triangleNormalSum += triangleNormal;
+        }
+
+        // calculate the average of the triangle normals
+        glm::vec3 vertexNormal = triangleNormalSum / float(triangleNormals.size());
+
+        // add to the vertax normals map
+        vertexNormals[vertexIndex] = vertexNormal;
+    }
+
+    return vertexNormals;
+}
+
+std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
+    const std::string &objFilename, float scale, const std::string &mtlFilename = "") {
     // create colour palette
-    std::map<std::string, Colour> palette = createPalette(mtlFilename);
+    std::string currentColour;
+    std::map<std::string, Colour> palette;
+    if (mtlFilename == "") {
+        palette["grey"] = Colour(122, 122, 122);
+        currentColour = "grey";
+    } else {
+        palette = createPalette(mtlFilename);
+    }
+
     std::vector<ModelTriangle> triangles = {};
     std::vector<glm::vec3> vertices = {};
+    // map of verticies to each triangle normal it is associated with
+    std::map<int, std::vector<glm::vec3> > verticesMap = {};
     std::vector<std::vector<int> > faces = {};
     std::vector<std::string> faceColours = {};
 
     // open file
     std::ifstream file(objFilename);
     if (file.is_open()) {
-        std::string currentColour;
         std::string line;
         while (std::getline(file, line)) {
             // add verticies
@@ -69,10 +104,13 @@ std::vector<ModelTriangle> parseObj(const std::string &objFilename, const std::s
             else if (line[0] == 'f') {
                 std::vector<std::string> nums = splitByDelimiter(line, ' ');
                 try {
-                    // remove backslashes
-                    nums.at(1).pop_back(); // vertex 1
-                    nums.at(2).pop_back(); // vertex 2
-                    nums.at(3).pop_back(); // vertex 3
+                    // remove backslashes if they exist
+                    if (nums.at(1).back() == '/') {
+                        nums.at(1).pop_back(); // vertex 1
+                        nums.at(2).pop_back(); // vertex 2
+                        nums.at(3).pop_back(); // vertex 3
+                    }
+
 
                     std::vector<int> face = {};
 
@@ -123,9 +161,16 @@ std::vector<ModelTriangle> parseObj(const std::string &objFilename, const std::s
 
                 // create triangle
                 ModelTriangle triangle = ModelTriangle(vert1, vert2, vert3, palette[faceColour]);
+                triangle.verticeIndecies = {v1index, v2index, v3index};
 
                 // add triangle
                 triangles.push_back(triangle);
+
+                // add to normal of the triangle to each vertex in vertex map
+                glm::vec3 normal = triangleNormal(vert1, vert2, vert3);
+                verticesMap[v1index].push_back(normal);
+                verticesMap[v2index].push_back(normal);
+                verticesMap[v3index].push_back(normal);
             } catch (...) {
                 std::cerr << "Error parsing OBJ file: error finding vertex for face" << std::endl;
             }
@@ -133,5 +178,8 @@ std::vector<ModelTriangle> parseObj(const std::string &objFilename, const std::s
     } else {
         std::cerr << "Could not open file " << objFilename << std::endl;
     }
-    return triangles;
+
+    // create vertex normals map
+    std::map<int, glm::vec3> vertexNormals = getVertexNormals(verticesMap);
+    return std::make_tuple(triangles, vertexNormals);
 }

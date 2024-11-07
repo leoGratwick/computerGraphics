@@ -6,6 +6,7 @@
 
 LightSource::LightSource()
     : position(0.0f, 0.0f, 0.0f), // Initialize position to (0, 0, 0)
+      intensity(100.0f),
       speed(0.1f) {
     // Set default speed
 }

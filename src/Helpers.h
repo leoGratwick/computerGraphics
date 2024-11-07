@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <cerrno>
 
+
 std::vector<float> lerpSingleFloats(float from, float to, int numberOfValues);
 
 std::vector<glm::vec3> lerpThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues);
@@ -41,6 +42,8 @@ uint32_t getColourFromTexture(CanvasPoint point, TextureMap &textureMap);
 glm::mat3 rotateOrientation(std::string axis, float angle, glm::mat3 currentOr);
 
 glm::vec3 triangleNormal(glm::vec3 vert1, glm::vec3 vert2, glm::vec3 vert3);
+
+glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 point);
 
 void redNoise(DrawingWindow &window);
 
