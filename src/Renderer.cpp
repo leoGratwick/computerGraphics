@@ -42,12 +42,13 @@ float theta = 0;
 
 LightSource lightSource = LightSource();
 
-float ambientLightThresh = 0.05f;
+float ambientLightThresh = 0.1f;
 float shadowDarkness = 0.4f;
 float specularExponent = 16.0f;
-bool moveLight = false;
+float specularIntensity = 0.5f;
 bool phongShading = true;
 
+bool moveLight = false;
 // depth buffer
 std::vector<std::vector<float> > zDepth(WIDTH, std::vector<float>(HEIGHT, -10000));
 
@@ -502,19 +503,14 @@ CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 point, float focalLength, flo
 
 RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std::vector<ModelTriangle> modelTriangles,
                                                     glm::vec3 rayOrigin) {
-    glm::vec3 closestSolution;
-    ModelTriangle closestTriangle;
-    size_t closestTriangleIndex = 0;
-    bool validIntersection = false;
-    int validIntersections = 0;
+    RayTriangleIntersection closestIntersection = RayTriangleIntersection();
+    closestIntersection.distanceFromCamera = std::numeric_limits<float>::infinity();
     float epsilion = 1e-6f;
 
     rayDirection = normalize(rayDirection);
 
     // iterate through model triangles and look for an intersection
     for (int i = 0; i < modelTriangles.size(); i++) {
-        validIntersection = false;
-
         ModelTriangle triangle = modelTriangles[i];
 
         // Calculate edge vectors of the triangle
@@ -531,6 +527,7 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
         float det = determinant(DEMatrix);
         if (std::abs(det) < epsilion) continue;
 
+
         // calculate possible solution
         glm::vec3 possibleSolution = inverse(DEMatrix) * SPVector;
 
@@ -541,83 +538,55 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
 
         // check for valid intersection
         if (t >= 0.0f && // intersection is in front of ray origin
-            u >= -epsilion && u <= 1.0f + epsilion && // epsilon for floating point comparison
-            v >= -epsilion && v <= 1.0f + epsilion && // epsilon for floating point comparison
+            u >= -epsilion && u <= 1.0f + epsilion && // epsilon for floating point error
+            v >= -epsilion && v <= 1.0f + epsilion && // epsilon for floating point error
             (u + v) <= 1.0f + epsilion) {
-            validIntersection = true;
-            validIntersections++;
-        }
-
-
-        if (validIntersection) {
-            if (validIntersections == 1) {
-                // for first valid intersection
-                closestSolution = possibleSolution;
-                closestTriangle = triangle;
-                closestTriangleIndex = i;
-            } else {
-                // if distance of possible solution is shorter than current closest solution
-                if (t < closestSolution.x) {
-                    // new closest solution found
-                    closestSolution = possibleSolution;
-                    closestTriangle = triangle;
-                    closestTriangleIndex = i;
-                }
+            if (t < closestIntersection.distanceFromCamera) {
+                // new closest solution found
+                closestIntersection = RayTriangleIntersection(
+                    rayOrigin + t * rayDirection,
+                    t,
+                    triangle,
+                    i,
+                    glm::vec2(u, v)
+                );
             }
         }
     }
 
-    // no valid intersections found - return will have distanceFromCamera = negative infinity
-    if (validIntersections == 0) {
-        RayTriangleIntersection invalid = RayTriangleIntersection();
-        invalid.distanceFromCamera = -std::numeric_limits<float>::infinity();
-
-        return invalid;
-    }
-
-    // get the distance and barycentric coords of the closest solution
-    float t = closestSolution.x; // distance
-    float u = closestSolution.y; // barycentric coordinate
-    float v = closestSolution.z; // barycentric coordinate
-
-    // calculate x,y,z coordinates of closest point using barycentric coordinates or triangle
-    glm::vec3 a = u * (closestTriangle.vertices[1] - closestTriangle.vertices[0]);
-    glm::vec3 b = v * (closestTriangle.vertices[2] - closestTriangle.vertices[0]);
-    glm::vec3 closestPoint = closestTriangle.vertices[0] + a + b;
-    glm::vec2 baryCoords = {u, v};
-
-
-    return RayTriangleIntersection(
-        closestPoint, t, closestTriangle, closestTriangleIndex, baryCoords);
+    return closestIntersection;
 }
 
 float getProximityBrightness(float distanceFromLight, float intensity) {
     float epsilon = 0.0000001;
     if (distanceFromLight < epsilon) {
         return 1.0f;
-    } else {
-        float proximityBrightness = intensity / (4 * M_PI * distanceFromLight * distanceFromLight);
-        // cap at 0-1
-        proximityBrightness = std::min(proximityBrightness, 1.0f);
-        proximityBrightness = std::max(0.0f, proximityBrightness);
-        return proximityBrightness;
     }
+
+    float proximityBrightness = intensity / (4 * M_PI * distanceFromLight * distanceFromLight);
+    // cap at 0-1
+    proximityBrightness = std::min(proximityBrightness, 1.0f);
+    proximityBrightness = std::max(0.0f, proximityBrightness);
+    return proximityBrightness;
 }
 
 float getSpecularBrightness(glm::vec3 pointToCameraDir, glm::vec3 pointToLightDir, glm::vec3 triangleNormal) {
-    glm::vec3 reflectionDir = reflect(pointToLightDir, triangleNormal);
+    glm::vec3 reflectionDir = reflect(-pointToLightDir, triangleNormal);
 
     float specularBrightness = std::min(1.0f, dot(pointToCameraDir, reflectionDir));
+
+    // add "shine"
     specularBrightness = std::pow(specularBrightness, specularExponent);
 
-    return std::max(specularBrightness, 0.0f);
+    return specularIntensity * std::max(specularBrightness, 0.0f);
 }
 
 void draw3DPoint(glm::vec3 point, Colour colour, float screenScale, DrawingWindow &window) {
+    // get position of point in camera space and project it onto the canvas
     glm::vec3 pointCameraSpace = changeCoordSystem(worldOrign, camera.position, point);
     CanvasPoint canp1 = projectVertexOntoCanvasPoint(pointCameraSpace, camera.focalLength, screenScale, window);
 
-    // draw 3 by 3 square around projected point
+    // draw 5 by 5 square around projected point
     for (int i = -2; i <= 2; i++) {
         for (int j = -2; j <= 2; j++) {
             CanvasPoint canp = CanvasPoint(canp1.x + i, canp1.y + j);
@@ -644,12 +613,12 @@ void drawWireframeModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
         glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[1]);
         glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[2]);
 
-        // project the verticies onto the canvas
+        // project the vertices onto the canvas
         CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, camera.focalLength, scale, window);
         CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, camera.focalLength, scale, window);
         CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, camera.focalLength, scale, window);
 
-        // draw the triangle created by projected verticies
+        // draw the triangle outlines created by projected verticies
         drawTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
     }
 }
@@ -661,51 +630,60 @@ void drawRasterizedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin
             elem = -std::numeric_limits<float>::infinity();
         }
     }
+
+    // loop through each triangle in the model
     for (int i = 0; i < model.size(); i++) {
         ModelTriangle tri = model.at(i);
         Colour colour = tri.colour;
-        // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
+
+        // move triangle coordinates from the model coordinate system to the camera coordinate system
         glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[0]);
         glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[1]);
         glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[2]);
 
-
+        // project the vertices onto the canvas
         CanvasPoint canp1 = projectVertexOntoCanvasPoint(vert1, camera.focalLength, scale, window);
         CanvasPoint canp2 = projectVertexOntoCanvasPoint(vert2, camera.focalLength, scale, window);
         CanvasPoint canp3 = projectVertexOntoCanvasPoint(vert3, camera.focalLength, scale, window);
 
-        // if (pointInCanvas(canp1, window) and pointInCanvas(canp2, window) and pointInCanvas(canp3, window)) {
+        // draw the triangles created by projected vertices
         fillTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
     }
 }
 
 void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin, float scale,
                         std::map<int, glm::vec3> vertexNormals, DrawingWindow &window) {
-    // change model coordinate system and record triangle normals for aoi brightness
+    // use rasterizer to get depth buffer for optimisation
+    drawRasterizedModel(model, modelOrigin, scale, window);
+    window.clearPixels();
 
+    // change model coordinate system and record triangle normals for aoi brightness
     for (int i = 0; i < model.size(); i++) {
         ModelTriangle tri = model.at(i);
-        // std::cout << glm::to_string(tri.vertices[0]) << glm::to_string(tri.vertices[1]) << glm::to_string(tri.vertices[2]) << std::endl;
-        glm::vec3 modelVert1 = tri.vertices[0];
-        glm::vec3 modelVert2 = tri.vertices[1];
-        glm::vec3 modelVert3 = tri.vertices[2];
 
-        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera.position, modelVert1);
-        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, modelVert2);;
-        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, modelVert3);
+        // calculate vertices in camera coordinate system
+        glm::vec3 vert1 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[0]);
+        glm::vec3 vert2 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[1]);;
+        glm::vec3 vert3 = changeCoordSystem(modelOrigin, camera.position, tri.vertices[2]);
 
+        // adjust vertices in model
         model[i].vertices[0] = vert1;
         model[i].vertices[1] = vert2;
         model[i].vertices[2] = vert3;
 
+        // add a triangle normal
         model[i].normal = triangleNormal(vert1, vert2, vert3);
     }
 
     float z = -camera.focalLength;
     CanvasPoint canvasCentre((window.width / 2), (window.height / 2));
 
+    // loop through each pixel on the screen
     for (int i = 0; i < window.width; i++) {
         for (int j = 0; j < window.height; j++) {
+            // if nothing is drawn on the pixel move to next pixel
+            if (zDepth[i][j] == -std::numeric_limits<float>::infinity()) { continue; }
+
             CanvasPoint pixelLocation = CanvasPoint(i, j);
 
             // calculate pixel coordinates in camera space
@@ -723,32 +701,40 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
             // direction of ray from camera to pixel
             glm::vec3 rayDir = normalize(canvasPointWorldSpace - camera.position);
 
-            //find the closest intersection with a model triangle
+            // find the closest intersection with a model triangle
             RayTriangleIntersection intersection = getClosestValidIntersection(rayDir, model, worldOrign);
 
 
-            // if not invalid intersection
-            if (intersection.distanceFromCamera > 0) {
+            // if there is a valid intersection
+            if (intersection.distanceFromCamera < std::numeric_limits<float>::infinity()) {
                 // change light source position from world coordinates to camera coordinates
                 glm::vec3 light = changeCoordSystem(glm::vec3(0, 0, 0), camera.position, lightSource.position);
-                // light = lightSource;
 
                 float epsilon = 0.001;
+
+                // direction vector going from the point to the light
                 glm::vec3 pointToLightRayDir = normalize(light - intersection.intersectionPoint);
+
+                // move the origin of the shadow ray slightly towards the light to avoid precision errors
                 glm::vec3 shadowRayOrigin = intersection.intersectionPoint + pointToLightRayDir * epsilon;
+
+                float distanceFromLight = length(shadowRayOrigin - light);
+
+                // send a ray from the current point to the light source to see if the point can see the light
                 RayTriangleIntersection shadowRayIntersection =
                         getClosestValidIntersection(pointToLightRayDir, model, shadowRayOrigin);
 
-                // calculate proximity brightness
-                float distanceFromLight = length(shadowRayOrigin - light);
-                float proximityBrightness = getProximityBrightness(distanceFromLight, lightSource.intensity);
+                bool inCastShadow = !(shadowRayIntersection.triangleIndex == intersection.triangleIndex or
+                                      shadowRayIntersection.
+                                      distanceFromCamera == std::numeric_limits<float>::infinity()) &&
+                                    shadowRayIntersection.
+                                    distanceFromCamera <= distanceFromLight;
 
 
-                // get normal of the triangle that the point is on
+                // BRIGHTNESS CALCULATIONS
+                // get normal to use in brightness calculations
                 glm::vec3 normal;
 
-                // angle of incidence brightness
-                float aoiBrightness;
                 if (phongShading) {
                     ModelTriangle triangle = intersection.intersectedTriangle;
 
@@ -770,10 +756,12 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
                     normal = intersection.intersectedTriangle.normal;
                 }
 
+                // calculate proximity brightness
+                float proximityBrightness = getProximityBrightness(distanceFromLight, lightSource.intensity);
 
+                // angle of incidence brightness
+                float aoiBrightness;
                 aoiBrightness = dot(pointToLightRayDir, normal);
-
-
                 // cap between 0-1
                 aoiBrightness = std::min(aoiBrightness, 1.0f);
                 aoiBrightness = std::max(0.0f, aoiBrightness);
@@ -783,43 +771,40 @@ void drawRayTracedModel(std::vector<ModelTriangle> model, glm::vec3 modelOrigin,
                                                                  normal);
 
 
-                //combine proximity brightness and aoi brightness
+                // combine proximity brightness and aoi brightness
                 float brightness = proximityBrightness * aoiBrightness;
 
                 // apply ambient light threshold
                 brightness = std::min(1.0f, brightness);
                 brightness = std::max(ambientLightThresh, brightness);
 
-                // if darkest brightness then no specular highlight
+                // if darkest brightness (ambient light threshold) then no specular highlight
                 if (brightness == ambientLightThresh) {
                     specularBrightness = 0.0f;
                 }
 
-                float castShadowBrightness = shadowDarkness * aoiBrightness * proximityBrightness;
+                // calculater the brightness of the cast shadows
+                float castShadowBrightness = shadowDarkness * aoiBrightness;
                 castShadowBrightness = std::min(1.0f, castShadowBrightness);
                 castShadowBrightness = std::max(ambientLightThresh, castShadowBrightness);
 
+                // get the colour of the model triangle
                 Colour pixelColour = intersection.intersectedTriangle.colour;
 
-                float directBrightness;
-                // if in shadow
-                if (!(shadowRayIntersection.triangleIndex == intersection.triangleIndex or shadowRayIntersection.
-                      distanceFromCamera == -std::numeric_limits<float>::infinity()) && shadowRayIntersection.
-                    distanceFromCamera <= distanceFromLight) {
-                    // in shadow
+                if (inCastShadow) {
+                    // apply cast shadow brightness
                     pixelColour.red *= castShadowBrightness;
                     pixelColour.green *= castShadowBrightness;
                     pixelColour.blue *= castShadowBrightness;
-
-
-                    // pixelColour = shadowRayIntersection.intersectedTriangle.colour;
                 } else {
-                    pixelColour.red = std::min(pixelColour.red * brightness * (1 + specularBrightness),
+                    // apply the brightness and specular brightness
+                    // brightness can only make the base colour darker and specular makes it lighter
+                    pixelColour.red = std::min(pixelColour.red * brightness + 255 * specularBrightness,
                                                255.0f);
                     pixelColour.green = std::min(
-                        pixelColour.green * brightness * (1 + specularBrightness),
+                        pixelColour.green * brightness + 255 * specularBrightness,
                         255.0f);
-                    pixelColour.blue = std::min(pixelColour.blue * brightness * (1 + specularBrightness),
+                    pixelColour.blue = std::min(pixelColour.blue * brightness + 255 * specularBrightness,
                                                 255.0f);
                 }
 
@@ -967,16 +952,17 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     // parse obj file to create model
-    // auto [boxModelTriangles, boxModelVertNormals] = parseObj("cornell-box.obj", 0.35f, "cornell-box.mtl");
-    auto [bunnyModelTriangles, bunnyModelVertNormals] = parseObj("stanford-bunny.obj", 10.0f);
+    auto [boxModelTriangles, boxModelVertNormals] = parseObj("cornell-box.obj", 0.35f, "cornell-box.mtl");
+    // auto [bunnyModelTriangles, bunnyModelVertNormals] = parseObj("stanford-bunny.obj", 10.0f);
     // auto [sphereModelTriangles, sphereModelVertNormals] = parseObj("sphere.obj", 1.0f);
+    auto [catModelTriangles, catModelVertNormals] = parseObj("12221_Cat_v1_l3.obj", 1.0f / 32.0f);
 
     // put light in ceiling
     lightSource.position = glm::vec3(0.0f, 0.7f, 0.0f);
     // lightSource.position = glm::vec3(0.0f, 0.2f, 0.6f);
 
     // for bunny
-    lightSource.position = glm::vec3(-0.500000, 2.000000, 1.200000);
+    // lightSource.position = glm::vec3(-0.500000, 2.000000, 1.200000);
 
 
     while (windowOpen) {
@@ -989,16 +975,17 @@ int main(int argc, char *argv[]) {
         glm::vec3 modelOrigin = glm::vec3(0, 0, 0);
         float screenScale = 500;
         glm::vec3 modelCentre = glm::vec3(0.0f, 1.0f, 0.0f);
+        modelCentre = worldOrign;
 
         if (lookAt) {
             camera.lookAt(modelCentre);
         }
 
         draw3DPoint(lightSource.position, Colour(155, 155, 0), screenScale, window);
-        draw3DPoint(modelOrigin, Colour(255, 0, 0), screenScale, window);
-        draw3DPoint(modelCentre, Colour(0, 255, 0), screenScale, window);
+        // draw3DPoint(modelOrigin, Colour(255, 0, 0), screenScale, window);
+        // draw3DPoint(modelCentre, Colour(0, 255, 0), screenScale, window);
 
-        draw(window, bunnyModelTriangles, modelOrigin, bunnyModelVertNormals, screenScale);
+        draw(window, boxModelTriangles, modelOrigin, boxModelVertNormals, screenScale);
 
         // render the frame so it gets shown on screen
         window.renderFrame();

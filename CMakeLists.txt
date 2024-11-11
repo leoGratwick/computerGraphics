@@ -44,7 +44,9 @@ add_executable(Renderer
         src/Camera.cpp
         src/Camera.h
         src/LightSource.cpp
-        src/LightSource.h)
+        src/LightSource.h
+        src/World.cpp
+        src/World.h)
 
 if (MSVC)
     target_compile_options(Renderer

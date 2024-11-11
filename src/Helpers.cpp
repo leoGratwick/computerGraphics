@@ -74,9 +74,13 @@ CanvasPoint getPointAlongLine(CanvasPoint lineStart, CanvasPoint lineEnd, float 
 std::vector<std::string> splitByDelimiter(std::string str, char delimiter) {
     std::string token;
     std::vector<std::string> tokens;
-    std::istringstream stream(str);
-    while (std::getline(stream, token, delimiter)) {
-        tokens.push_back(token);
+    std::istringstream ss(str);
+    std::string stringDelim = std::string(1, delimiter);
+
+    while (std::getline(ss >> std::ws, token, delimiter)) {
+        if (!token.empty()) {
+            tokens.push_back(token);
+        }
     }
     return tokens;
 }
@@ -117,10 +121,6 @@ glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 
     return outPoint;
 }
 
-glm::vec3 getVertexInTriangleNormal(glm::vec3 vert1Normal, glm::vec3 vert2Normal, glm::vec3 vert3Normal,
-                                    glm::vec3 edge3) {
-    return glm::vec3(0, 0, 0);
-}
 
 void redNoise(DrawingWindow &window) {
     for (size_t y = 0; y < window.height; y++) {

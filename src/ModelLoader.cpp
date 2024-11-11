@@ -66,8 +66,10 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
     // create colour palette
     std::string currentColour;
     std::map<std::string, Colour> palette;
+    std::map<int, glm::vec3> vertexNormals;
+
     if (mtlFilename == "") {
-        palette["grey"] = Colour(122, 122, 122);
+        palette["grey"] = Colour(100, 100, 100);
         currentColour = "grey";
     } else {
         palette = createPalette(mtlFilename);
@@ -75,6 +77,7 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
 
     std::vector<ModelTriangle> triangles = {};
     std::vector<glm::vec3> vertices = {};
+    std::vector<glm::vec3> normals = {};
     // map of verticies to each triangle normal it is associated with
     std::map<int, std::vector<glm::vec3> > verticesMap = {};
     std::vector<std::vector<int> > faces = {};
@@ -86,7 +89,7 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
         std::string line;
         while (std::getline(file, line)) {
             // add verticies
-            if (line[0] == 'v') {
+            if (line[0] == 'v' and line[1] == ' ') {
                 std::vector<std::string> nums = splitByDelimiter(line, ' ');
                 try {
                     // get vetex coordinates and apply scale
@@ -98,6 +101,31 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
                     vertices.push_back(vert);
                 } catch (...) {
                     std::cerr << "Error parsing OBJ file: couldn't convert vertices from string to float" << std::endl;
+                    std::cerr << line << std::endl;
+                    for (const auto &num: nums) {
+                        std::cout << "Parsed element: " << num << std::endl;
+                    }
+                    return {};
+                }
+            }
+            // vertex normals given
+            else if (line[0] == 'v' and line[1] == 'n') {
+                std::vector<std::string> nums = splitByDelimiter(line, ' ');
+                try {
+                    // get vetex normal values and apply scale
+                    float x = std::stof(nums.at(1)) * scale;
+                    float y = std::stof(nums.at(2)) * scale;
+                    float z = std::stof(nums.at(3)) * scale;
+
+                    glm::vec3 norm(x, y, z);
+                    normals.push_back(normalize(norm));
+                } catch (...) {
+                    std::cerr << "Error parsing OBJ file: couldn't convert vertices from string to float" << std::endl;
+                    std::cerr << line << std::endl;
+                    for (const auto &num: nums) {
+                        std::cout << "Parsed element: " << num << std::endl;
+                    }
+                    return {};
                 }
             }
             // add faces
@@ -105,23 +133,40 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
                 std::vector<std::string> nums = splitByDelimiter(line, ' ');
                 try {
                     // remove backslashes if they exist
-                    if (nums.at(1).back() == '/') {
-                        nums.at(1).pop_back(); // vertex 1
-                        nums.at(2).pop_back(); // vertex 2
-                        nums.at(3).pop_back(); // vertex 3
-                    }
+                    // if (nums.at(1).back() == '/') {
+                    //     nums.at(1).pop_back(); // vertex 1
+                    //     nums.at(2).pop_back(); // vertex 2
+                    //     nums.at(3).pop_back(); // vertex 3
+                    // }
+
+                    // split the verticies into vertex index / texture point index / normal index
+                    std::vector<std::string> numsSplit1 = splitByDelimiter(nums.at(1), '/');
+                    std::vector<std::string> numsSplit2 = splitByDelimiter(nums.at(2), '/');
+                    std::vector<std::string> numsSplit3 = splitByDelimiter(nums.at(3), '/');
 
 
                     std::vector<int> face = {};
 
                     // add verticies to face
                     try {
-                        face.push_back(std::stoi(nums[1]));
-                        face.push_back(std::stoi(nums[2]));
-                        face.push_back(std::stoi(nums[3]));
+                        face.push_back(std::stoi(numsSplit1[0]));
+                        face.push_back(std::stoi(numsSplit2[0]));
+                        face.push_back(std::stoi(numsSplit3[0]));
                     } catch (...) {
                         std::cerr << "Error parsing OBJ file: error converting face indices" << std::endl;
                     }
+
+                    // try to get normals
+                    if (!normals.empty()) {
+                        try {
+                            vertexNormals[std::stoi(numsSplit1[0])] = normals.at(std::stoi(numsSplit1[2]));
+                            vertexNormals[std::stoi(numsSplit2[0])] = normals.at(std::stoi(numsSplit2[2]));
+                            vertexNormals[std::stoi(numsSplit3[0])] = normals.at(std::stoi(numsSplit3[2]));
+                        } catch (...) {
+                            std::cerr << "Error parsing OBJ file: error converting normals" << std::endl;
+                        }
+                    }
+
 
                     //add face
                     faces.push_back(face);
@@ -129,7 +174,7 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
                 } catch (...) {
                     std::cerr << "Error parsing OBJ file: error parsing face" << std::endl;
                 }
-            } else if (line.substr(0, 6) == "usemtl") {
+            } else if (line.substr(0, 6) == "usemtl" && mtlFilename != "") {
                 // changing current colour
                 std::vector<std::string> tokens = splitByDelimiter(line, ' ');
                 try {
@@ -180,6 +225,11 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
     }
 
     // create vertex normals map
-    std::map<int, glm::vec3> vertexNormals = getVertexNormals(verticesMap);
+    if (vertexNormals.empty()) {
+        vertexNormals = getVertexNormals(verticesMap);
+    }
+
+
+    std::cout << "finished loading model from " << objFilename << std::endl;
     return std::make_tuple(triangles, vertexNormals);
 }
