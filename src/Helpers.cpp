@@ -121,6 +121,18 @@ glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 
     return outPoint;
 }
 
+glm::vec3 addNoisetoDir(glm::vec3 direction, float intensity) {
+    direction = glm::normalize(direction);
+    glm::vec3 noise = glm::vec3(0, 0, 0);
+    // random number between 1 and -1
+    noise.x = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+    noise.y = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+    noise.z = static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
+
+    noise = noise * intensity;
+
+    return normalize(noise + direction);
+}
 
 void redNoise(DrawingWindow &window) {
     for (size_t y = 0; y < window.height; y++) {

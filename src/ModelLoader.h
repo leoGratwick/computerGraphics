@@ -10,13 +10,14 @@
 #include <tuple>
 
 #include "Helpers.h"
+#include "Model.h"
 
 std::map<std::string, Colour> createPalette(const std::string &filename);
 
 std::unordered_map<int, glm::vec3> getVertexNormals(
     std::map<glm::vec3, std::vector<glm::vec3> > verticesMap);
 
-std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
+Model parseObj(
     const std::string &objFilename, float scale, const std::string &mtlFilename = "");
 
 #endif //MODELLOADER_H

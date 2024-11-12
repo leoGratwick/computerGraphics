@@ -5,6 +5,7 @@
 #include "ModelTriangle.h"
 #include "Helpers.h"
 #include <tuple>
+#include "Model.h"
 
 
 std::map<std::string, Colour> createPalette(const std::string &filename) {
@@ -61,7 +62,7 @@ std::map<int, glm::vec3> getVertexNormals(
     return vertexNormals;
 }
 
-std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
+Model parseObj(
     const std::string &objFilename, float scale, const std::string &mtlFilename = "") {
     // create colour palette
     std::string currentColour;
@@ -224,12 +225,12 @@ std::tuple<std::vector<ModelTriangle>, std::map<int, glm::vec3> > parseObj(
         std::cerr << "Could not open file " << objFilename << std::endl;
     }
 
-    // create vertex normals map
+    // create vertex normals map if not included in file
     if (vertexNormals.empty()) {
         vertexNormals = getVertexNormals(verticesMap);
     }
 
 
     std::cout << "finished loading model from " << objFilename << std::endl;
-    return std::make_tuple(triangles, vertexNormals);
+    return Model(triangles, vertexNormals);
 }

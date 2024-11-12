@@ -447,6 +447,33 @@ src/LightSource.cpp.s:
 	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/LightSource.cpp.s
 .PHONY : src/LightSource.cpp.s
 
+src/Model.o: src/Model.cpp.o
+
+.PHONY : src/Model.o
+
+# target to build an object file
+src/Model.cpp.o:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Model.cpp.o
+.PHONY : src/Model.cpp.o
+
+src/Model.i: src/Model.cpp.i
+
+.PHONY : src/Model.i
+
+# target to preprocess a source file
+src/Model.cpp.i:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Model.cpp.i
+.PHONY : src/Model.cpp.i
+
+src/Model.s: src/Model.cpp.s
+
+.PHONY : src/Model.s
+
+# target to generate assembly for a file
+src/Model.cpp.s:
+	$(MAKE) -f CMakeFiles/Renderer.dir/build.make CMakeFiles/Renderer.dir/src/Model.cpp.s
+.PHONY : src/Model.cpp.s
+
 src/ModelLoader.o: src/ModelLoader.cpp.o
 
 .PHONY : src/ModelLoader.o
@@ -573,6 +600,9 @@ help:
 	@echo "... src/LightSource.o"
 	@echo "... src/LightSource.i"
 	@echo "... src/LightSource.s"
+	@echo "... src/Model.o"
+	@echo "... src/Model.i"
+	@echo "... src/Model.s"
 	@echo "... src/ModelLoader.o"
 	@echo "... src/ModelLoader.i"
 	@echo "... src/ModelLoader.s"

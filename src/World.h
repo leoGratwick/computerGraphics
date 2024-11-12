@@ -4,19 +4,35 @@
 
 #ifndef WORLD_H
 #define WORLD_H
+#include <vector>
 
+#include "Camera.h"
+#include "LightSource.h"
+
+enum Mode {
+    WireFrame,
+    Rasterized,
+    RayTraced
+};
 
 struct World {
-    // LightSource lightSource = LightSource();
-    // camera
-    //
-    // float ambientLightThresh = 0.05f;
-    // float shadowDarkness = 0.4f;
-    // float specularExponent = 16.0f;
-    // float specularIntensity = 0.5f;
+    std::vector<LightSource> lights;
+    Camera camera;
 
-    // bool phongShading = true;
-    // render mode
+
+    // lighting vars
+    float ambientLightThresh;
+    float shadowDarkness;
+    float specularExponent;
+    float specularIntensity;
+
+    bool phongShading;
+
+    Mode renderMode;
+
+    World();
+
+    void printWorldVars();
 };
 
 

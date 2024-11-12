@@ -45,6 +45,8 @@ glm::vec3 triangleNormal(glm::vec3 vert1, glm::vec3 vert2, glm::vec3 vert3);
 
 glm::vec3 changeCoordSystem(glm::vec3 fromOrigin, glm::vec3 toOrigin, glm::vec3 point);
 
+glm::vec3 addNoisetoDir(glm::vec3 direction, float intensity);
+
 void redNoise(DrawingWindow &window);
 
 void grayScale1D(DrawingWindow &window);
