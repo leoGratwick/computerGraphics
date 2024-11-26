@@ -10,6 +10,8 @@
 # This creates the executable in the build directory. You only need to *generate* a build if you modify the CMakeList.txt file.
 # For any other changes to the source code, simply recompile.
 
+# run ./build/Renderer from the root directory or the executable won't be able to find the obj and mtl file
+# altertativley mannualy copy cornel-box.obj and cornell-box.mtl into the build directory and run ./Renderer from the build dir
 
 cmake_minimum_required(VERSION 3.12)
 project(Renderer)
