@@ -15,7 +15,10 @@ struct Model {
     std::map<int, glm::vec3> vertexNormalMap{};
     glm::vec3 center{};
     glm::vec3 origin{};
+    bool hasTexture;
     TextureMap textureMap{};
+    float specularExponent;
+    float specularIntensity;
 
     Model();
 

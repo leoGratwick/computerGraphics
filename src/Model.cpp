@@ -10,7 +10,9 @@ Model::Model() = default;
 
 Model::Model(std::vector<ModelTriangle> triangles, std::map<int, glm::vec3> vertexNormalMap, glm::vec3 center,
              glm::vec3 origin) : triangles(triangles),
-                                 vertexNormalMap(vertexNormalMap), center(center), origin(origin), textureMap() {
+                                 vertexNormalMap(vertexNormalMap), center(center), origin(origin), hasTexture(false),
+                                 specularExponent(16.0f),
+                                 specularIntensity(0.5f) {
     // when model is initialised make sure the triangles have normals
     for (auto &tri: this->triangles) {
         // add a triangle normal
@@ -19,7 +21,9 @@ Model::Model(std::vector<ModelTriangle> triangles, std::map<int, glm::vec3> vert
 }
 
 Model::Model(std::vector<ModelTriangle> triangles, std::map<int, glm::vec3> vertexNormalMap) : triangles(triangles),
-    vertexNormalMap(vertexNormalMap), center(glm::vec3(0, 0, 0)), origin(glm::vec3(0, 0, 0)), textureMap() {
+    vertexNormalMap(vertexNormalMap), center(glm::vec3(0, 0, 0)), origin(glm::vec3(0, 0, 0)), hasTexture(false),
+    specularExponent(16.0f),
+    specularIntensity(0.5f) {
     // when model is initialised make sure the triangles have normals
     for (auto &tri: this->triangles) {
         // add a triangle normal

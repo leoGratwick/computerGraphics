@@ -10,6 +10,7 @@ struct RayTriangleIntersection {
 	ModelTriangle intersectedTriangle;
 	size_t triangleIndex;
 	glm::vec2 baryCoords;
+	int modelIndex;
 
 	RayTriangleIntersection();
 

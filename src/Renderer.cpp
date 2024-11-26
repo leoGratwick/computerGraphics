@@ -17,19 +17,19 @@
 #include "ModelLoader.h"
 #include "Camera.h"
 #include "LightSource.h"
-#include <tuple>
-
 #include "Model.h"
 #include "World.h"
 
 #define WIDTH 900
 #define HEIGHT 900
 #define INFINITY std::numeric_limits<float>::infinity()
+#define FRAME_RATE 60
 
 // GLOBAL VARS
 
 // window
 bool windowOpen = true;
+int frameNumber = 0;
 
 // world
 glm::vec3 worldOrign(0, 0, 0);
@@ -37,34 +37,15 @@ World world = World();
 
 
 // camera
-// Camera camera = Camera();
 bool lookAt = false;
+bool record = false;
 
 // for rotation
 float theta = 0;
-
-// lighting
-
-// LightSource lightSource = LightSource();
-
-// float ambientLightThresh = 0.1f;
-// float shadowDarkness = 0.4f;
-// float specularExponent = 16.0f;
-// float specularIntensity = 0.5f;
-// bool phongShading = true;
-
 bool moveLight = false;
-// depth buffer
-std::vector<std::vector<float> > zDepth(WIDTH, std::vector<float>(HEIGHT, -10000));
 
-// Render Mode
-// enum Mode {
-//     WireFrame,
-//     Rasterized,
-//     RayTraced
-// };
-//
-// Mode renderMode = WireFrame;
+// depth buffer
+std::vector<std::vector<float> > zDepth(WIDTH, std::vector<float>(HEIGHT, -INFINITY));
 
 
 void drawCanvasPoint(CanvasPoint point, Colour col, DrawingWindow &window) {
@@ -76,7 +57,7 @@ void drawCanvasPoint(CanvasPoint point, Colour col, DrawingWindow &window) {
         uint32_t colour = colourToInt(col);
 
         // check depth buffer
-        if (point.depth < 0.001f && point.depth > -0.001f) {
+        if (point.depth < 0.00001f && point.depth > -0.00001f) {
             window.setPixelColour(x, y, colour);
             zDepth[x][y] = 0;
         }
@@ -95,14 +76,15 @@ void drawCanvasPointUint(CanvasPoint point, uint32_t col, DrawingWindow &window)
         int y = std::round(point.y);
 
         // check depth buffer
-        if (point.depth == 0) {
-            window.setPixelColour(x, y, col);
-            zDepth[x][y] = 0;
+        if (fabs(point.depth) < 1e-6f) {
+            return; // Skip this point
         }
-        // check if point is closer than current point on that pixel
-        else if ((zDepth[x][y] < 1 / point.depth) && !(zDepth[x][y] == 0)) {
+
+        float inverseDepth = 1.0f / point.depth;
+
+        if (zDepth[x][y] == 0 || inverseDepth < zDepth[x][y]) {
             window.setPixelColour(x, y, col);
-            zDepth[x][y] = 1 / point.depth;
+            zDepth[x][y] = inverseDepth; // Update the depth buffer
         }
     }
 }
@@ -478,7 +460,7 @@ void textureTriangle(DrawingWindow &window, CanvasTriangle drawingTriangle, Text
     }
 }
 
-CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 point, float focalLength, float scale, DrawingWindow &window) {
+CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 point, float focalLength, DrawingWindow &window) {
     // in camera coord system
     CanvasPoint out;
 
@@ -491,16 +473,16 @@ CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 point, float focalLength, flo
     float widthShift = window.width / 2;
 
     // if behind camera
-    if (point.z > 0.001f) {
+    if (point.z > -0.00001f) {
         return {INFINITY, INFINITY};
     }
 
     // calculate projected coordinates
-    out.x = -(point.x * (focalLength / point.z)) * scale + widthShift;
-    out.y = (point.y * (focalLength / point.z)) * scale + heightShift;
+    out.x = -(point.x * (focalLength / point.z)) * world.screenScale + widthShift;
+    out.y = (point.y * (focalLength / point.z)) * world.screenScale + heightShift;
 
-    // calcualte depth
-    if (point.z == 0) {
+    // calculate depth
+    if (point.z < 0.0001f && point.z > -0.0001f) {
         out.depth = 0;
     } else {
         out.depth = 1 / point.z;
@@ -520,6 +502,7 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
     rayDirection = normalize(rayDirection);
 
     // iterate through model triangles and look for an intersection
+
     for (int i = 0; i < modelTriangles.size(); i++) {
         ModelTriangle triangle = modelTriangles[i];
 
@@ -542,20 +525,20 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
         glm::vec3 possibleSolution = inverse(DEMatrix) * SPVector;
 
 
-        float t = possibleSolution.x; // distance
+        float distance = possibleSolution.x; // distance
         float u = possibleSolution.y; // barycentric coordinate
         float v = possibleSolution.z; // barycentric coordinate
 
         // check for valid intersection
-        if (t >= 0.0f && // intersection is in front of ray origin
+        if (distance >= 0.0f && // intersection is in front of ray origin
             u >= -epsilion && u <= 1.0f + epsilion && // epsilon for floating point error
             v >= -epsilion && v <= 1.0f + epsilion && // epsilon for floating point error
             (u + v) <= 1.0f + epsilion) {
-            if (t < closestIntersection.distanceFromCamera) {
+            if (distance < closestIntersection.distanceFromCamera) {
                 // new closest solution found
                 closestIntersection = RayTriangleIntersection(
-                    rayOrigin + t * rayDirection,
-                    t,
+                    rayOrigin + distance * rayDirection,
+                    distance,
                     triangle,
                     i,
                     glm::vec2(u, v)
@@ -563,6 +546,7 @@ RayTriangleIntersection getClosestValidIntersection(glm::vec3 rayDirection, std:
             }
         }
     }
+
 
     return closestIntersection;
 }
@@ -580,21 +564,22 @@ float getProximityBrightness(float distanceFromLight, float intensity) {
     return proximityBrightness;
 }
 
-float getSpecularBrightness(glm::vec3 pointToCameraDir, glm::vec3 pointToLightDir, glm::vec3 triangleNormal) {
+float getSpecularBrightness(glm::vec3 pointToCameraDir, glm::vec3 pointToLightDir, glm::vec3 triangleNormal,
+                            float specularExponent, float specularIntensity) {
     glm::vec3 reflectionDir = reflect(-pointToLightDir, triangleNormal);
 
     float specularBrightness = std::min(1.0f, dot(pointToCameraDir, reflectionDir));
 
     // add "shine"
-    specularBrightness = std::pow(specularBrightness, world.specularExponent);
+    specularBrightness = std::pow(specularBrightness, specularExponent);
 
-    return world.specularIntensity * std::max(specularBrightness, 0.0f);
+    return specularIntensity * std::max(specularBrightness, 0.0f);
 }
 
-void draw3DPoint(glm::vec3 point, Colour colour, float screenScale, DrawingWindow &window) {
+void draw3DPoint(glm::vec3 point, Colour colour, DrawingWindow &window) {
     // get position of point in camera space and project it onto the canvas
     glm::vec3 pointCameraSpace = changeCoordSystem(worldOrign, world.camera.position, point);
-    CanvasPoint canp1 = projectVertexOntoCanvasPoint(pointCameraSpace, world.camera.focalLength, screenScale, window);
+    CanvasPoint canp1 = projectVertexOntoCanvasPoint(pointCameraSpace, world.camera.focalLength, window);
 
     // draw 5 by 5 square around projected point
     for (int i = -2; i <= 2; i++) {
@@ -605,7 +590,7 @@ void draw3DPoint(glm::vec3 point, Colour colour, float screenScale, DrawingWindo
     }
 }
 
-void drawRasterizedModel(Model model, float scale, DrawingWindow &window) {
+void drawRasterizedModel(Model model, DrawingWindow &window) {
     // initialise depth buffer
     for (auto &row: zDepth) {
         for (auto &elem: row) {
@@ -621,9 +606,9 @@ void drawRasterizedModel(Model model, float scale, DrawingWindow &window) {
         Colour colour = tri.colour;
 
         // project the vertices onto the canvas
-        CanvasPoint canp1 = projectVertexOntoCanvasPoint(tri.vertices[0], world.camera.focalLength, scale, window);
-        CanvasPoint canp2 = projectVertexOntoCanvasPoint(tri.vertices[1], world.camera.focalLength, scale, window);
-        CanvasPoint canp3 = projectVertexOntoCanvasPoint(tri.vertices[2], world.camera.focalLength, scale, window);
+        CanvasPoint canp1 = projectVertexOntoCanvasPoint(tri.vertices[0], world.camera.focalLength, window);
+        CanvasPoint canp2 = projectVertexOntoCanvasPoint(tri.vertices[1], world.camera.focalLength, window);
+        CanvasPoint canp3 = projectVertexOntoCanvasPoint(tri.vertices[2], world.camera.focalLength, window);
 
         // dont render behind camera
         if (canp1.x == INFINITY || canp2.x == INFINITY || canp3.x == INFINITY || std::isnan(canp1.x) ||
@@ -634,15 +619,15 @@ void drawRasterizedModel(Model model, float scale, DrawingWindow &window) {
             drawTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
         } else {
             fillTriangle(window, CanvasTriangle(canp1, canp2, canp3), colour);
+            // window.renderFrame();
         }
     }
 }
 
-void drawRayTracedModel(Model model, float scale,
+void drawRayTracedModel(Model model,
                         DrawingWindow &window) {
     // use rasterizer to get depth buffer for optimisation
-    drawRasterizedModel(model, scale, window);
-
+    drawRasterizedModel(model, window);
 
     // change model coordinate system and record triangle normals for aoi brightness
     model.changeCoordSystems(world.camera.position);
@@ -661,8 +646,8 @@ void drawRayTracedModel(Model model, float scale,
             CanvasPoint pixelLocation = CanvasPoint(i, j);
 
             // calculate pixel coordinates in camera space
-            float x = (pixelLocation.x - canvasCentre.x) / scale;
-            float y = -(pixelLocation.y - canvasCentre.y) / scale;
+            float x = (pixelLocation.x - canvasCentre.x) / world.screenScale;
+            float y = -(pixelLocation.y - canvasCentre.y) / world.screenScale;
 
             glm::vec3 canvasPointLocationCameraSpace = glm::vec3(x, y, z);
 
@@ -677,6 +662,20 @@ void drawRayTracedModel(Model model, float scale,
 
             // find the closest intersection with a model triangle
             RayTriangleIntersection intersection = getClosestValidIntersection(rayDir, model.triangles, worldOrign);
+
+            // mirror for blue box in cornell box
+            // if (intersection.triangleIndex == 31 or intersection.triangleIndex == 26) {
+            //     glm::vec3 reflectionDir;
+            //     reflectionDir = rayDir - 2 * dot(rayDir, intersection.intersectedTriangle.normal) * intersection.
+            //                     intersectedTriangle.normal;
+            //     reflectionDir = normalize(reflectionDir);
+            //
+            //     glm::vec3 mirrorOrigin = intersection.intersectionPoint - rayDir * 0.001f;
+            //
+            //     RayTriangleIntersection mirrorReflection = getClosestValidIntersection(
+            //         reflectionDir, model.triangles, mirrorOrigin);
+            //     intersection = mirrorReflection;
+            // }
 
 
             // if there is a valid intersection
@@ -695,15 +694,41 @@ void drawRayTracedModel(Model model, float scale,
 
                 float distanceFromLight = length(shadowRayOrigin - light);
 
+
                 // send a ray from the current point to the light source to see if the point can see the light
                 RayTriangleIntersection shadowRayIntersection =
                         getClosestValidIntersection(pointToLightRayDir, model.triangles, shadowRayOrigin);
 
-                bool inCastShadow = !(shadowRayIntersection.triangleIndex == intersection.triangleIndex or
-                                      shadowRayIntersection.
-                                      distanceFromCamera == INFINITY) &&
-                                    shadowRayIntersection.
-                                    distanceFromCamera <= distanceFromLight;
+
+                // soft shadows
+                int lightsNotSeen = 0;
+                std::vector<glm::vec3> lightPoints = world.lights[0].getLightPoints(-pointToLightRayDir);
+                bool inCastShadow = false;
+
+
+                for (auto &lightPoint: lightPoints) {
+                    // light in camera space
+                    glm::vec3 lightPointCameraSpace = changeCoordSystem(glm::vec3(0, 0, 0), world.camera.position,
+                                                                        lightPoint);
+                    // direction vector going from the point to the light
+                    glm::vec3 pointToLightRaySoftDir =
+                            normalize(lightPointCameraSpace - intersection.intersectionPoint);
+
+                    // send a ray from the current point to the light source to see if the point can see the light
+                    RayTriangleIntersection shadowRayIntersection =
+                            getClosestValidIntersection(pointToLightRaySoftDir, model.triangles, shadowRayOrigin);
+
+                    bool lightPointNotSeen = !(shadowRayIntersection.triangleIndex == intersection.triangleIndex or
+                                               shadowRayIntersection.
+                                               distanceFromCamera == INFINITY) &&
+                                             shadowRayIntersection.
+                                             distanceFromCamera <= distanceFromLight;
+
+                    if (lightPointNotSeen) {
+                        inCastShadow = true;
+                        lightsNotSeen++;
+                    }
+                }
 
 
                 // BRIGHTNESS CALCULATIONS
@@ -744,7 +769,8 @@ void drawRayTracedModel(Model model, float scale,
 
                 //specular brightness
                 float specularBrightness = getSpecularBrightness(-rayDir, pointToLightRayDir,
-                                                                 normal);
+                                                                 normal, model.specularExponent,
+                                                                 model.specularIntensity);
 
 
                 // combine proximity brightness and aoi brightness
@@ -767,29 +793,58 @@ void drawRayTracedModel(Model model, float scale,
                 castShadowBrightness = std::max(world.ambientLightThresh, castShadowBrightness);
 
                 // get the colour of the model triangle
-                Colour pixelColour = intersection.intersectedTriangle.colour;
+                Colour pixelColour;
 
-                if (inCastShadow) {
-                    // apply cast shadow brightness
-                    pixelColour.red *= castShadowBrightness;
-                    pixelColour.green *= castShadowBrightness;
-                    pixelColour.blue *= castShadowBrightness;
+                if (model.hasTexture) {
+                    // get testure point using barycentric coordinates of intersection
+                    float u = intersection.baryCoords[0];
+                    float v = intersection.baryCoords[1];
+
+                    std::array<TexturePoint, 3> texturePoints = intersection.intersectedTriangle.texturePoints;
+
+                    glm::vec2 texturep1 = {texturePoints.at(0).x, texturePoints.at(0).y};
+                    glm::vec2 texturep2 = {texturePoints.at(1).x, texturePoints.at(1).y};
+                    glm::vec2 texturep3 = {texturePoints.at(2).x, texturePoints.at(2).y};
+
+                    CanvasPoint pointOnTextureMap;
+
+                    // calculate point on texture
+                    glm::vec2 a = u * (texturep2 - texturep1);
+                    glm::vec2 b = v * (texturep3 - texturep1);
+                    glm::vec2 texturePoint = texturep1 + a + b;
+
+                    // convert from vec2 to canvas point
+                    pointOnTextureMap.x = texturePoint.x;
+                    pointOnTextureMap.y = texturePoint.y;
+                    uint32_t colour = getColourFromTexture(pointOnTextureMap, model.textureMap);
+                    pixelColour = intToColour(colour);
                 } else {
-                    // apply the brightness and specular brightness
-                    // brightness can only make the base colour darker and specular makes it lighter
-                    pixelColour.red = std::min(pixelColour.red * brightness + 255 * specularBrightness,
-                                               255.0f);
-                    pixelColour.green = std::min(
-                        pixelColour.green * brightness + 255 * specularBrightness,
-                        255.0f);
-                    pixelColour.blue = std::min(pixelColour.blue * brightness + 255 * specularBrightness,
-                                                255.0f);
+                    pixelColour = intersection.intersectedTriangle.colour;
                 }
+
+                // apply brightness
+                if (inCastShadow) {
+                    // calculate soft shadow, the darker, the more lights the point has seen the smaller shadow softness
+                    // if the point has not seen any lights softness will be 0
+                    float shadowSoftness =
+                            1.0f - static_cast<float>(lightsNotSeen) / static_cast<float>(lightPoints.size());
+
+                    float brighDiff = brightness - castShadowBrightness;
+                    brightness = castShadowBrightness + shadowSoftness * brighDiff;
+                }
+
+                pixelColour.red = std::min(pixelColour.red * brightness + 255 * specularBrightness,
+                                           255.0f);
+                pixelColour.green = std::min(
+                    pixelColour.green * brightness + 255 * specularBrightness,
+                    255.0f);
+                pixelColour.blue = std::min(pixelColour.blue * brightness + 255 * specularBrightness,
+                                            255.0f);
 
 
                 drawCanvasPoint(pixelLocation, pixelColour, window);
             } else {
-                // corrects outlibe differnce between rasterizer and ray tracer
+                // corrects outline differnce between rasterizer and ray tracer
                 drawCanvasPoint(pixelLocation, Colour(0, 0, 0), window);
             }
         }
@@ -844,15 +899,18 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             } else {
                 world.camera.moveBackward();
             }
-        } else if (event.key.keysym.sym == SDLK_l) {
+        } else if (event.key.keysym.sym == SDLK_i) {
             // rotate on x axis
-            world.camera.rotateX(0.1f);
+            world.camera.rotateX(0.05f);
         } else if (event.key.keysym.sym == SDLK_k) {
+            // rotate on x axis
+            world.camera.rotateX(-0.05f);
+        } else if (event.key.keysym.sym == SDLK_l) {
             // rotate on y axis
-            world.camera.rotateY(0.1f);
-        } else if (event.key.keysym.sym == SDLK_o) {
-            // rotate on z axis
-            world.camera.rotateZ(0.1f);
+            world.camera.rotateY(-0.05f);
+        } else if (event.key.keysym.sym == SDLK_j) {
+            // rotate on y axis
+            world.camera.rotateY(0.05f);
         } else if (event.key.keysym.sym == SDLK_h) {
             // spin around model
             lookAt = true;
@@ -870,33 +928,73 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
             lookAt = !lookAt;
             // camera.lookAt(glm::vec3(0, 1, 1));
         } else if (event.key.keysym.sym == SDLK_m) {
-            // toggle move lightp
+            // toggle move light
             moveLight = !moveLight;
+            if (moveLight) {
+                std::cout << "You are now moving the light" << std::endl;
+            } else {
+                std::cout << "You are now moving the camera" << std::endl;
+            }
         } else if (event.key.keysym.sym == SDLK_p) {
             // print world info
             world.printWorldVars();
         } else if (event.key.keysym.sym == SDLK_UP) {
             // increase shinyness
-            world.specularExponent *= 2;
-            std::cout << "specular exponent: " << world.specularExponent << std::endl;
+            world.models[world.currentModelIndex].specularExponent *= 2;
+            std::cout << "specular exponent: " << world.models[0].specularExponent << std::endl;
         } else if (event.key.keysym.sym == SDLK_DOWN) {
-            // decrease shinyness
-            world.specularExponent /= 2;
-            std::cout << "specular exponent: " << world.specularExponent << std::endl;
+            // decrease shininess
+            if (world.models[world.currentModelIndex].specularExponent > 1) {
+                world.models[world.currentModelIndex].specularExponent /= 2;
+            }
+            std::cout << "specular exponent: " << world.models[0].specularExponent << std::endl;
         } else if (event.key.keysym.sym == SDLK_LEFT) {
             // toggle phong shading
             world.phongShading = !world.phongShading;
-            std::cout << "phong shading: " << world.phongShading << std::endl;
+            if (world.phongShading) {
+                std::cout << "Phong shading on" << std::endl;
+            } else {
+                std::cout << "Phong shading off" << std::endl;
+            }
+        } else if (event.key.keysym.sym == SDLK_RIGHT) {
+            // toggle soft shading
+            if (world.lights[0].size == 0.0f) {
+                world.lights[0].size = 0.1;
+                std::cout << "soft shading on" << std::endl;
+            } else {
+                world.lights[0].size = 0.0f;
+                std::cout << "soft shading off" << std::endl;
+            }
+        } else if (event.key.keysym.sym == SDLK_r) {
+            record = !record;
+            if (record) {
+                std::cout << "recording" << std::endl;
+            } else {
+                std::cout << "recording off" << std::endl;
+            }
         }
 
 
         // Change Render Type
         else if (event.key.keysym.sym == SDLK_6) {
             world.renderMode = WireFrame;
+            std::cout << "switched to wireframe mode" << std::endl;
         } else if (event.key.keysym.sym == SDLK_7) {
             world.renderMode = Rasterized;
+            std::cout << "switched to rasterized mode" << std::endl;
         } else if (event.key.keysym.sym == SDLK_8) {
             world.renderMode = RayTraced;
+            // record = true;
+            std::cout << "switched to raytraced mode" << std::endl;
+        }
+
+        // change model drawn
+        else if (event.key.keysym.sym == SDLK_1) {
+            world.currentModelIndex = 0;
+        } else if (event.key.keysym.sym == SDLK_2) {
+            world.currentModelIndex = 1;
+        } else if (event.key.keysym.sym == SDLK_3) {
+            world.currentModelIndex = 2;
         }
     }
     // handle mouse clicks
@@ -912,65 +1010,131 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
     }
 }
 
-void draw(DrawingWindow &window, Model model, float scale) {
+void draw(DrawingWindow &window, Model model) {
     // render model
 
     if (world.renderMode == WireFrame or world.renderMode == Rasterized) {
-        drawRasterizedModel(model, scale, window);
+        drawRasterizedModel(model, window);
     } else if (world.renderMode == RayTraced) {
-        drawRayTracedModel(model, scale, window);
+        drawRayTracedModel(model, window);
     }
 }
 
 
 int main(int argc, char *argv[]) {
+    srand(time(nullptr));
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
-    // create world
 
-
-    // parse obj file to create model
+    // Create models by parsing files
 
     Model boxModel = parseObj("cornell-box.obj", 0.35f, "cornell-box.mtl");
+    world.models.push_back(boxModel);
+    //
+    //
+    // Model sphereModel = parseObj("sphere.obj", 1.0f);
+    // sphereModel.origin = glm::vec3(0.1f, -1.3f, -1.0f);
+    // world.models.push_back(sphereModel);
+    //
+    //
+    // Model logoModel = parseObj("logo.obj", 1.0f / 450.0f);
+    // logoModel.origin = glm::vec3(-0.7f, -0.5f, 1.7f);
+    // logoModel.center = glm::vec3(0.0f, 0.1f, 1.7f);
+    // logoModel.specularIntensity = 0.1f;
+    // world.models.push_back(logoModel);
 
 
-    // Model bunnyModel = parseObj("stanford-bunny.obj", 10.0f);
-    Model sphereModel = parseObj("sphere.obj", 1.0f);
+    // world.lights[0].size = 0.3f;
+    world.currentModelIndex = 0;
+    // world.shadowDarkness = 0.1f;
 
-    // Model catModel = parseObj("12221_Cat_v1_l3.obj", 1.0f / 32.0f);
 
-    // put light in ceiling
-    world.lights[0].position = glm::vec3(0.0f, 0.7f, 0.0f);
-    // lightSource.position = glm::vec3(0.0f, 0.2f, 0.6f);
+    // world.lights[0].speed = 0.02f;
+    // world.lights[0].intensity = 250.0f;
+    // world.camera.position = glm::vec3(0.825764, -0.312230, 0.350722);
 
-    // for bunny
-    // lightSource.position = glm::vec3(-0.500000, 2.000000, 1.200000);
-
+    // world.camera.speed = 0.05f;
+    world.ambientLightThresh = 0.1f;
+    world.renderMode = Rasterized;
 
     while (windowOpen) {
+        Uint32 frameStart = SDL_GetTicks();
         //poll for events - otherwise the window will freeze
         if (window.pollForInputEvents(event)) handleEvent(event, window);
 
         window.clearPixels();
 
-        // draw box model
-        float screenScale = 500;
-        // glm::vec3 bunnymodelCentre = glm::vec3(0.0f, 1.0f, 0.0f);
-        glm::vec3 sphereModelOrigin = glm::vec3(2.0f, -1.0f, 0.0f);
-        sphereModel.origin = sphereModelOrigin;
-
         if (lookAt) {
-            world.camera.lookAt(worldOrign);
+            world.camera.lookAt(world.getCurrentModel().center);
         }
 
+        //draw all models in world
+        // for (auto model: world.models) {
+        //     draw(window, model);
+        // }
 
-        draw(window, boxModel, screenScale);
-        draw(window, sphereModel, screenScale);
-        draw3DPoint(world.lights[0].position, Colour(155, 155, 0), screenScale, window);
+        draw(window, world.getCurrentModel());
+
+        // draw light source
+        // draw3DPoint(world.lights[0].position, Colour(255, 255, 255), window);
+        // draw3DPoint(world.getCurrentModel().center, Colour(255, 0, 0), window);
 
         // render the frame so it gets shown on screen
         window.renderFrame();
+
+        // lookAt = true;
+        // if (theta + 0.05 > M_PI * 2) {
+        //     theta = 0.0;
+        // } else theta += 0.05;
+        //
+        // float r = 4.0;
+        // glm::vec3 centre(0, 0, 0);
+        // centre = glm::vec3(0.0f, 1.0f, 0.0f);
+        // world.camera.position.x = centre.x + std::cos(theta) * r;
+        // world.camera.position.z = centre.z + std::sin(theta) * r;
+
+        if (record) {
+            // if (frameNumber < 33) {
+            //     world.camera.moveForward();
+            // } else if (frameNumber < 60) {
+            //     world.camera.moveRight();
+            // } else if (frameNumber < 100) {
+            //     world.camera.moveLeft();
+            // } else if (frameNumber < 120) {
+            //     world.camera.moveRight();
+            //     world.camera.moveUp();
+            // } else if (frameNumber < 140) {
+            //     // world.camera.moveRight();
+            //     world.camera.moveDown();
+            // } else {
+            //     windowOpen = false;
+            // }
+
+            lookAt = true;
+            if (frameNumber < 100) {
+                world.camera.moveRight();
+                world.lights[0].moveBackward();
+            } else if (frameNumber < 200) {
+                world.lights[0].moveBackward();
+
+                if (frameNumber % 3 == 0) {
+                    world.camera.moveRight();
+                }
+            } else {
+                windowOpen = false;
+            }
+
+            window.savePPM("HackspaceLogoAnimation/output_" + std::to_string(frameNumber) + ".ppm");
+            frameNumber++;
+        }
+
+
+        // Cap the frame rate
+        Uint32 frameTime = SDL_GetTicks() - frameStart; // Calculate frame duration
+        if (frameTime < FRAME_RATE) {
+            SDL_Delay(FRAME_RATE - frameTime); // Delay to maintain 60 FPS
+        }
     }
 
     return 0;

@@ -4,11 +4,12 @@ RayTriangleIntersection::RayTriangleIntersection() = default;
 
 RayTriangleIntersection::RayTriangleIntersection(const glm::vec3 &point, float distance, const ModelTriangle &triangle,
                                                  size_t index,
-                                                 const glm::vec2 &baryCoords) : intersectionPoint(point),
-	distanceFromCamera(distance),
-	intersectedTriangle(triangle),
-	triangleIndex(index),
-	baryCoords(baryCoords) {
+                                                 const glm::vec2 &baryCoords
+) : intersectionPoint(point),
+    distanceFromCamera(distance),
+    intersectedTriangle(triangle),
+    triangleIndex(index),
+    baryCoords(baryCoords) {
 }
 
 std::ostream &operator<<(std::ostream &os, const RayTriangleIntersection &intersection) {

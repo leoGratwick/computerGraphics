@@ -29,6 +29,8 @@ std::vector<CanvasPoint> lerpCanvasPoints(CanvasPoint from, CanvasPoint to, int 
 
 uint32_t colourToInt(Colour col);
 
+Colour intToColour(uint32_t colour);
+
 float splitPercent(CanvasPoint lineStart, CanvasPoint lineEnd, CanvasPoint point);
 
 bool pointInCanvas(CanvasPoint point, DrawingWindow &window);

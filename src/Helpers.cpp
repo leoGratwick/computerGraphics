@@ -56,6 +56,15 @@ uint32_t colourToInt(Colour col) {
     return colour;
 }
 
+Colour intToColour(uint32_t colour) {
+    Colour col;
+    col.red = (colour >> 16) & 0xFF;
+    col.green = (colour >> 8) & 0xFF;
+    col.blue = colour & 0xFF;
+
+    return col;
+}
+
 float splitPercent(CanvasPoint lineStart, CanvasPoint lineEnd, CanvasPoint point) {
     float splitP = std::abs(point.x - lineStart.x) / std::abs(lineEnd.x - lineStart.x);
     return splitP;
@@ -91,12 +100,15 @@ uint32_t getColourFromTexture(CanvasPoint point, TextureMap &textureMap) {
 
     if (std::round(point.x) >= w or std::round(point.y) >= h) {
         // std::cout << point ;
-        throw std::runtime_error(" this point doesnt exist on the texture");
+        std::stringstream ss;
+        ss << "this point doesnt exist on the texture: " << point << " texture height " << h << " texture width " << w;
+        throw std::runtime_error(ss.str());
     }
     int ind = std::round(point.y) * w + std::round(point.x);
 
     return textureMap.pixels[ind];
 }
+
 
 glm::mat3 rotateOrientation(std::string axis, float angle, glm::mat3 currentOr) {
     glm::mat3 rotationMatrix = glm::mat3();

@@ -13,7 +13,7 @@ Camera::Camera()
     : position(0.0f, 0.0f, 4.0f), // Initialize position to (0, 0, 4)
       orientation(glm::mat3(1.0f)), // Initialize orientation to the identity matrix
       speed(0.1f), // Set default speed
-      focalLength(2.0f) {
+      focalLength(2.1f) {
     // Set default focal length
 }
 
