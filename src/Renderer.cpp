@@ -19,6 +19,7 @@
 #include "LightSource.h"
 #include "Model.h"
 #include "World.h"
+#include <filesystem>
 
 #define WIDTH 900
 #define HEIGHT 900
@@ -1025,7 +1026,6 @@ int main(int argc, char *argv[]) {
     srand(time(nullptr));
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
-
 
     // Create models by parsing files
 
