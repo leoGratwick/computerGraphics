@@ -2,10 +2,7 @@
 
 Welcome to my 3rd Year Computer Graphics Coursework project.
 
-<video width="900" height="900" controls>
-  <source src="demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+[Click here to view the demo video](demo.mp4)
 
 > **The video above is a demo showcasing some of the features implemented in the renderer.**
 
