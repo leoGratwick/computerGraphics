@@ -2,7 +2,7 @@
 
 Welcome to my 3rd Year Computer Graphics Coursework project.
 
-[Click here to view the demo video](demo.mp4)
+[![Renderer Demo](https://img.youtube.com/vi/70PwL_9v6Z8/0.jpg)](https://youtube.com/shorts/70PwL_9v6Z8?feature=share)
 
 > **The video above is a demo showcasing some of the features implemented in the renderer.**
 
