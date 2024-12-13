@@ -6,6 +6,8 @@ Welcome to my 3rd Year Computer Graphics Coursework project.
 
 > **The video above is a demo showcasing some of the features implemented in the renderer.**
 
+> **Note**: You can also watch a higher-quality version of the demo directly in the repository: [demo.mp4](demo.mp4).
+
 ## Overview
 
 **RedNoise** is a custom renderer written in C++ without relying on any external rendering libraries. This project
